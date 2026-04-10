@@ -21,7 +21,7 @@ class EditorPage:
     所有 DOM 选择器集中管理在此类中，方便百家号改版后统一修改。
     """
 
-    EDITOR_URL = "https://baijiahao.baidu.com/builder/rc/edit?type=news"
+    EDITOR_URL = "https://baijiahao.baidu.com/builder/rc/edit?type=news&is_from_cms=1"
     HOME_URL = "https://baijiahao.baidu.com/builder/rc/home"
 
     def __init__(self, page: Page):
@@ -30,13 +30,25 @@ class EditorPage:
     async def navigate_to_editor(self):
         """导航到图文编辑页面。"""
         baijiahao_logger.info("正在打开图文编辑器...")
-        await self.page.goto(self.EDITOR_URL, timeout=60000)
+
+        for attempt in range(3):
+            await self.page.goto(self.EDITOR_URL, timeout=60000)
+            current_url = self.page.url
+
+            # 检测是否被重定向到登录页
+            if await self.page.get_by_text("注册/登录百家号").count():
+                raise CookieExpiredError("Cookie 已失效，被重定向到登录页")
+
+            # 如果被重定向到 home 或 stoken，等待后重试
+            if "builder/rc/home" in current_url or "stoken" in current_url:
+                baijiahao_logger.info(f"被重定向到首页，等待后重试 ({attempt + 1}/3)...")
+                await asyncio.sleep(3)
+                continue
+
+            # 成功到达编辑器
+            break
+
         await self.page.wait_for_url("**/builder/rc/edit**", timeout=60000)
-
-        # 检测是否被重定向到登录页
-        if await self.page.get_by_text("注册/登录百家号").count():
-            raise CookieExpiredError("Cookie 已失效，被重定向到登录页")
-
         baijiahao_logger.success("编辑器已打开")
 
     async def dismiss_guides(self):
@@ -81,7 +93,7 @@ class EditorPage:
         baijiahao_logger.info("引导关闭处理完毕")
 
     async def wait_for_editor_ready(self):
-        """等待编辑器完全加载，并关闭引导弹窗。"""
+        """等待编辑器完全加载。"""
         try:
             await self.page.wait_for_selector(
                 "input[placeholder*='标题'], div[contenteditable='true']",
@@ -91,7 +103,11 @@ class EditorPage:
         except Exception:
             baijiahao_logger.warning("等待编辑器加载超时，继续执行...")
 
-        await self.dismiss_guides()
+        # 静默尝试关闭新手引导（首次使用才会出现，不影响后续操作）
+        try:
+            await self.dismiss_guides()
+        except Exception:
+            pass
 
     async def _find_title_input(self):
         """尝试多种选择器定位标题输入框。"""
@@ -141,20 +157,31 @@ class EditorPage:
 
     async def fill_content(self, content: str):
         """填写正文内容到 UEditor iframe 中。"""
-        frame = self._get_content_frame()
+        frame = await self._get_content_frame()
         body = frame.locator("body")
         await body.click(timeout=10000)
         await asyncio.sleep(0.5)
 
+        # 通过 UEditor 的 iframe window 调用 execCommand 写入内容
+        # 这会让 UEditor 正确追踪内容状态
         paragraphs = content.split("\n")
-        for i, para in enumerate(paragraphs):
+        html_parts = []
+        for para in paragraphs:
             para = para.strip()
-            if not para:
-                continue
-            await self.page.keyboard.type(para, delay=random.randint(20, 50))
-            if i < len(paragraphs) - 1:
-                await self.page.keyboard.press("Enter")
-                await asyncio.sleep(random.uniform(0.3, 0.8))
+            if para:
+                html_parts.append(f"<p>{para}</p>")
+        html_content = "<br>".join(html_parts)
+
+        await self.page.evaluate("""
+            (html) => {
+                const iframe = document.querySelector('.edui-editor-iframeholder iframe')
+                    || document.querySelector('.editor-outter-wrapper iframe');
+                if (iframe && iframe.contentDocument) {
+                    iframe.contentDocument.body.focus();
+                    iframe.contentDocument.execCommand('insertHTML', false, html);
+                }
+            }
+        """, html_content)
 
         baijiahao_logger.info("正文已填写")
 
@@ -167,7 +194,7 @@ class EditorPage:
 
         # 关键前提：必须先 focus 编辑器 iframe body，否则图片按钮不会触发上传对话框
         try:
-            frame = self._get_content_frame()
+            frame = await self._get_content_frame()
             body = frame.locator("body")
             await body.click(timeout=5000)
             await asyncio.sleep(0.5)
@@ -239,7 +266,7 @@ class EditorPage:
         baijiahao_logger.warning(f"图片处理等待超时 ({timeout}s)，继续执行...")
 
     async def select_cover(self):
-        """选择封面图（从正文中选择第一张图作为单图封面）。"""
+        """选择封面图。"""
         baijiahao_logger.info("开始选择封面图...")
 
         # 选择"单图"封面模式
@@ -247,48 +274,48 @@ class EditorPage:
         if await single_cover.count() > 0:
             await single_cover.first.click()
             baijiahao_logger.debug("已选择单图封面模式")
-            await asyncio.sleep(1)
-
-        # 点击"选正文图"区域
-        select_btn = self.page.locator("div._93c3fe2a3121c388-item")
-        if await select_btn.count() > 0:
-            await select_btn.click()
-            baijiahao_logger.info("已点击选正文图")
             await asyncio.sleep(2)
 
-            # 用 JS 点击第一张可选图片的容器
-            await self.page.evaluate("""
-                () => {
-                    const wrappers = document.querySelectorAll('.cheetah-modal-wrap [class*="imgWrapper"]');
-                    for (const w of wrappers) {
-                        const img = w.querySelector('img');
-                        if (img && img.src) {
-                            w.dispatchEvent(new MouseEvent('click', {bubbles: true}));
-                            return;
-                        }
-                    }
-                }
-            """)
-            await asyncio.sleep(1)
+            # 点击封面选择容器，打开图片选择弹窗
+            cover_container = self.page.locator("div._73a3a52aab7e3a36-content")
+            if await cover_container.count() > 0:
+                await cover_container.first.click()
+                baijiahao_logger.info("已点击封面选择容器")
+                await asyncio.sleep(2)
 
-            # 用 JS 点击确认按钮
-            await self.page.evaluate("""
-                () => {
-                    const btns = document.querySelectorAll('.cheetah-modal-wrap button');
-                    for (const btn of btns) {
-                        const text = btn.innerText?.trim();
-                        if (text === '确认' || text === '确定') {
-                            btn.click();
-                            return;
+                # 等确定按钮可用，点击确定
+                confirm_btn = self.page.locator("button:has-text('确定'):visible")
+                try:
+                    await confirm_btn.first.click(timeout=10000)
+                    baijiahao_logger.info("已点击封面确定按钮")
+                except Exception:
+                    # 按钮可能是 disabled，用 JS 强制点击
+                    await self.page.evaluate("""
+                        () => {
+                            const btns = document.querySelectorAll('.cheetah-modal-wrap:visible button');
+                            for (const b of btns) {
+                                if (b.innerText?.trim() === '确定') {
+                                    b.click();
+                                    return;
+                                }
+                            }
                         }
-                    }
-                }
-            """)
-            await asyncio.sleep(2)
+                    """)
+                    baijiahao_logger.info("已通过 JS 点击封面确定按钮")
+
+                await asyncio.sleep(2)
+
+            # 确保没有残留弹窗
+            for _ in range(5):
+                any_modal = self.page.locator(".cheetah-modal-wrap:visible")
+                if await any_modal.count() == 0:
+                    break
+                await self.page.keyboard.press("Escape")
+                await asyncio.sleep(0.5)
 
             baijiahao_logger.success("封面图已选择")
         else:
-            baijiahao_logger.warning("未找到选正文图按钮，跳过封面选择")
+            baijiahao_logger.warning("未找到单图封面选项，跳过封面选择")
 
     async def set_schedule_and_publish(self, publish_date: datetime):
         """设置定时发布。"""
@@ -355,12 +382,36 @@ class EditorPage:
         """关闭或确认页面上的弹窗。"""
         modal = self.page.locator(".cheetah-modal-wrap:visible")
         if await modal.count() == 0:
-            return False
+            # 也检查是否有非 cheetah 弹窗（如百度安全验证等）
+            overlay = self.page.locator(".modal-mask:visible, .ant-modal-wrap:visible, [class*='modal']:visible")
+            if await overlay.count() == 0:
+                return False
 
         baijiahao_logger.info("检测到弹窗，尝试处理...")
 
-        for text in ["确定", "确认", "继续", "是", "发布", "提交", "OK"]:
-            btn = modal.locator(f"button:has-text('{text}')")
+        # 先打印页面弹窗相关文本，方便调试
+        try:
+            modal_text = await self.page.evaluate("""
+                () => {
+                    const modals = document.querySelectorAll('.cheetah-modal-wrap, .modal-mask, [class*="modal"]');
+                    const texts = [];
+                    for (const m of modals) {
+                        if (m.offsetParent !== null) {
+                            texts.push(m.innerText.substring(0, 200));
+                        }
+                    }
+                    return texts.join(' | ');
+                }
+            """)
+            if modal_text:
+                baijiahao_logger.debug(f"弹窗文本: {modal_text[:300]}")
+        except Exception:
+            pass
+
+        for text in ["确定", "确认", "继续", "是", "发布", "提交", "OK", "确认发布"]:
+            btn = self.page.locator(f".cheetah-modal-wrap:visible button:has-text('{text}')")
+            if await btn.count() == 0:
+                btn = self.page.locator(f"button:has-text('{text}'):visible")
             if await btn.count() > 0:
                 try:
                     await btn.first.click(timeout=5000)
@@ -369,8 +420,6 @@ class EditorPage:
                 baijiahao_logger.info(f"点击弹窗按钮: {text}")
                 await asyncio.sleep(1)
                 return True
-
-        for text in ["取消", "关闭", "返回修改"]:
             btn = modal.locator(f"button:has-text('{text}')")
             if await btn.count() > 0:
                 await btn.first.click()
@@ -386,18 +435,56 @@ class EditorPage:
     async def publish_immediately(self):
         """立即发布。"""
         # 关闭所有可能残留的弹窗/遮罩
-        for _ in range(3):
+        for _ in range(5):
             await self.page.keyboard.press("Escape")
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.3)
 
-        publish_btn = self.page.locator('[data-testid="publish-btn"]')
-        if await publish_btn.count() == 0:
-            publish_btn = self.page.get_by_test_id("publish-btn")
-        await publish_btn.click(force=True)
-        baijiahao_logger.info("已点击发布按钮")
+        await asyncio.sleep(1)
+
+        # 滚动到页面顶部，确保发布按钮可见
+        await self.page.evaluate("window.scrollTo(0, 0)")
+        await asyncio.sleep(0.5)
+
+        # 用 JS 触发真实鼠标事件点击发布按钮
+        clicked = await self.page.evaluate("""
+            () => {
+                // 方法1：通过 data-testid，dispatch 真实鼠标事件
+                let el = document.querySelector('[data-testid="publish-btn"]');
+                if (el) {
+                    // 优先找内部 button 子元素
+                    const innerBtn = el.querySelector('button') || el;
+                    innerBtn.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, cancelable: true}));
+                    innerBtn.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, cancelable: true}));
+                    innerBtn.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                    return 'data-testid';
+                }
+
+                // 方法2：通过文本匹配 button 元素
+                const buttons = document.querySelectorAll('button');
+                for (const b of buttons) {
+                    const text = b.innerText?.trim();
+                    if (text === '发布' || text === '提交') {
+                        b.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                        return 'text:' + text;
+                    }
+                }
+
+                return null;
+            }
+        """)
+
+        if clicked:
+            baijiahao_logger.info(f"已通过 JS 点击发布按钮 (方式: {clicked})")
+        else:
+            baijiahao_logger.error("JS 未找到发布按钮")
 
         await asyncio.sleep(3)
         await self._dismiss_modal()
+
+        # 再次尝试关闭残留遮罩
+        for _ in range(3):
+            await self.page.keyboard.press("Escape")
+            await asyncio.sleep(0.3)
 
     async def verify_publish_success(self) -> bool:
         """验证发布是否成功（检测页面跳转或审核提示）。"""
@@ -409,11 +496,12 @@ class EditorPage:
             baijiahao_logger.error("出现百度安全验证，请使用 --headed 模式手动处理")
             return False
 
-        for _ in range(10):
+        for attempt in range(10):
             url = self.page.url
             body_text = await self.page.evaluate(
                 "() => document.body.innerText.substring(0, 1000)"
             )
+            baijiahao_logger.debug(f"验证轮次 {attempt + 1}: URL={url[:80]}, 文本前100字={body_text[:100]}")
 
             if "/builder/rc/clue" in url or "/builder/rc/home" in url:
                 baijiahao_logger.success("文章发布成功（已跳转）!")

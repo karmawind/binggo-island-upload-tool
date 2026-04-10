@@ -34,6 +34,11 @@ from uploader.xiaohongshu_uploader.main import (
     cookie_auth as xiaohongshu_cookie_auth,
     xiaohongshu_setup,
 )
+from uploader.baijiahao_uploader.article import BaiJiaHaoArticle
+from uploader.baijiahao_uploader.main import (
+    cookie_auth as baijiahao_cookie_auth,
+    baijiahao_setup,
+)
 
 SCHEDULE_FORMAT = "%Y-%m-%d %H:%M"
 
@@ -117,6 +122,18 @@ class XiaohongshuNoteUploadRequest:
     tags: list[str]
     publish_date: datetime | int
     publish_strategy: str = XIAOHONGSHU_PUBLISH_STRATEGY_IMMEDIATE
+    debug: bool = True
+    headless: bool = True
+
+
+@dataclass(slots=True)
+class BaijiahaoArticleUploadRequest:
+    account_name: str
+    title: str
+    content: str
+    image_files: list[Path]
+    tags: list[str]
+    publish_date: datetime | int
     debug: bool = True
     headless: bool = True
 
@@ -232,6 +249,46 @@ async def check_bilibili_account(account_name: str) -> bool:
         return False
     result = run_biliup_command(["-u", str(account_file), "renew"])
     return result.returncode == 0
+
+
+async def login_baijiahao_account(account_name: str, headless: bool = True) -> dict:
+    account_file = resolve_account_file("baijiahao", account_name)
+    try:
+        await baijiahao_setup(str(account_file), handle=True)
+        return {"success": True, "account_file": str(account_file)}
+    except Exception as e:
+        return {"success": False, "message": str(e), "account_file": str(account_file)}
+
+
+async def check_baijiahao_account(account_name: str) -> bool:
+    account_file = resolve_account_file("baijiahao", account_name)
+    if not account_file.exists():
+        return False
+    return await baijiahao_cookie_auth(str(account_file))
+
+
+async def upload_baijiahao_article(request: BaijiahaoArticleUploadRequest) -> Path:
+    account_file = resolve_account_file("baijiahao", request.account_name)
+    is_ready = await baijiahao_setup(str(account_file), handle=False)
+    if not is_ready:
+        raise RuntimeError(
+            f"Baijiahao cookie is missing or expired: {account_file}. Run `sau baijiahao login --account {request.account_name}` first."
+        )
+
+    app = BaiJiaHaoArticle(
+        title=request.title,
+        content=request.content,
+        image_paths=[str(p) for p in request.image_files],
+        tags=request.tags,
+        publish_date=request.publish_date,
+        account_file=str(account_file),
+        headless=request.headless,
+        debug=request.debug,
+    )
+    success = await app.main()
+    if not success:
+        raise RuntimeError(f"Baijiahao article publish failed for: {request.title}")
+    return account_file
 
 
 async def upload_video(request: DouyinVideoUploadRequest) -> Path:
@@ -541,6 +598,25 @@ def build_parser() -> argparse.ArgumentParser:
     bilibili_upload_video_parser.add_argument("--tid", required=True, type=int, help="Bilibili category id")
     bilibili_upload_video_parser.add_argument("--tags", default="", help="Comma-separated tags, such as tag1,tag2")
     bilibili_upload_video_parser.add_argument("--schedule", type=schedule_value, help=f"Schedule time in {schedule_help}")
+
+    baijiahao_parser = platform_parsers.add_parser("baijiahao", help="Baijiahao operations")
+    baijiahao_actions = baijiahao_parser.add_subparsers(dest="action", required=True)
+
+    for action_name in ("login", "check"):
+        action_parser = baijiahao_actions.add_parser(action_name, help=f"Baijiahao {action_name}")
+        action_parser.add_argument("--account", required=True, help="Baijiahao user-defined account_name")
+        if action_name == "login":
+            add_runtime_flags(action_parser)
+
+    baijiahao_upload_article_parser = baijiahao_actions.add_parser("upload-article", help="Upload one article to Baijiahao")
+    baijiahao_upload_article_parser.add_argument("--account", required=True, help="Baijiahao user-defined account_name")
+    baijiahao_upload_article_parser.add_argument("--title", required=True, help="Article title")
+    baijiahao_upload_article_parser.add_argument("--content", default="", help="Article content")
+    baijiahao_upload_article_parser.add_argument("--images", nargs="+", type=existing_file_path, default=[], help="Image file paths")
+    baijiahao_upload_article_parser.add_argument("--tags", default="", help="Comma-separated tags, such as tag1,tag2")
+    baijiahao_upload_article_parser.add_argument("--schedule", type=schedule_value, help=f"Schedule time in {schedule_help}")
+    add_runtime_flags(baijiahao_upload_article_parser)
+
     return parser
 
 
@@ -727,6 +803,36 @@ async def dispatch(args: argparse.Namespace) -> int:
             return 0
 
         raise RuntimeError(f"Unsupported Bilibili action: {args.action}")
+
+    if args.platform == "baijiahao":
+        if args.action == "login":
+            result = await login_baijiahao_account(args.account, headless=args.headless)
+            if not result["success"]:
+                raise RuntimeError(result["message"])
+            print(f"Baijiahao login flow completed: {result['account_file']}")
+            return 0
+
+        if args.action == "check":
+            is_valid = await check_baijiahao_account(args.account)
+            print("valid" if is_valid else "invalid")
+            return 0 if is_valid else 1
+
+        if args.action == "upload-article":
+            request = BaijiahaoArticleUploadRequest(
+                account_name=args.account,
+                title=args.title,
+                content=args.content,
+                image_files=parse_image_files(args.images) if args.images else [],
+                tags=parse_tags(args.tags),
+                publish_date=args.schedule or 0,
+                debug=args.debug,
+                headless=args.headless,
+            )
+            await upload_baijiahao_article(request)
+            print(f"Baijiahao article upload submitted: {request.title}")
+            return 0
+
+        raise RuntimeError(f"Unsupported Baijiahao action: {args.action}")
 
     raise RuntimeError(f"Unsupported platform: {args.platform}")
 

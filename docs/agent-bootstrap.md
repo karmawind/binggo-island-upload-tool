@@ -11,6 +11,9 @@
 - `kuaishou`
 - `xiaohongshu`
 - `baijiahao`
+- `smzdm`
+- `toutiao`
+- `ctrip`
 
 ## 这份文档解决什么问题
 
@@ -20,9 +23,9 @@
 - CLI 文档
 - 平台 skill
 
-但这些内容更偏向“agent 进入仓库之后怎么执行”。
+但这些内容更偏向"agent 进入仓库之后怎么执行"。
 
-这份文档补的是“用户第一次把仓库交给 agent 客户端时，应该怎么说”。
+这份文档补的是"用户第一次把仓库交给 agent 客户端时，应该怎么说"。
 
 ## 推荐使用方式
 
@@ -44,8 +47,11 @@
 - kuaishou
 - xiaohongshu
 - baijiahao
+- smzdm
+- toutiao
+- ctrip
 
-你的第一目标不是通读全部源码，也不是优先运行历史 examples，而是先把项目安装到“可运行、可验证、可继续执行任务”的状态。
+你的第一目标不是通读全部源码，也不是优先运行历史 examples，而是先把项目安装到"可运行、可验证、可继续执行任务"的状态。
 
 请遵守以下规则：
 
@@ -62,24 +68,38 @@
    - `skills/xiaohongshu-upload/`
    - `skills/bilibili-upload/`
    - `skills/baijiahao-upload/`
+   - `skills/smzdm-upload/`
+   - `skills/toutiao-upload/`
+   - `skills/ctrip-upload/`
 6. 不要默认走历史 `examples/` 和旧 Web 路径，除非当前 CLI 主线不可用。
 7. 如果登录流程生成二维码图片，不要只返回图片路径；请直接展示图片，或者明确告诉我该打开哪个本地图片文件扫码。
 8. 如果是 Bilibili 登录，不要在非交互环境里强行代跑；应改为指导我在本地真实终端执行。
-9. 如果是百家号操作，推荐使用有头模式（`--headed`），因为百家号使用 UEditor 编辑器，有头模式便于观察和调试。
+9. 如果是百家号、什么值得买、头条号或携程操作，推荐使用有头模式（`--headed`），因为这些平台使用富文本编辑器，有头模式便于观察和调试。
 10. 安装完成后，请优先验证以下命令：
-   - `sau --help`
-   - `sau douyin --help`
-   - `sau kuaishou --help`
-   - `sau xiaohongshu --help`
-   - `sau bilibili --help`
-   - `sau baijiahao --help`
+    - `sau --help`
+    - `sau douyin --help`
+    - `sau kuaishou --help`
+    - `sau xiaohongshu --help`
+    - `sau bilibili --help`
+    - `sau baijiahao --help`
+    - `sau smzdm --help`
+    - `sau toutiao --help`
+    - `sau ctrip --help`
 11. 完成后，请明确输出：
-   - 你实际执行了哪些命令
-   - 哪些验证通过了
-   - 当前项目是否已经进入”可继续登录/上传”的状态
-   - 推荐我下一步执行什么
+    - 你实际执行了哪些命令
+    - 哪些验证通过了
+    - 当前项目是否已经进入"可继续登录/上传"的状态
+    - 推荐我下一步执行什么
 
 12. 百家号支持图文文章发布（`sau baijiahao upload-article`），上传图片时会自动选择封面。百家号登录需要扫码，建议使用 `--headed` 模式。
+
+13. 什么值得买支持图文文章发布（`sau smzdm upload-article`），使用 ProseMirror 编辑器，上传图片后需点击"插入正文"。什么值得买登录需要扫码，建议使用 `--headed` 模式。
+
+14. 头条号支持图文文章发布（`sau toutiao upload-article`），使用 ProseMirror 编辑器，发布需两步确认（预览并发布 → 确认发布）。头条号登录需要扫码，建议使用 `--headed` 模式。
+
+15. 携程支持图文笔记发布（`sau ctrip upload-article`），使用 Draft.js 编辑器，标题和描述均为 DraftEditor contenteditable 组件。通过 we.ctrip.com 内容中心登录，建议使用 `--headed` 模式。最多上传 20 张图片，推荐宽高比 3:4~2:1。不支持定时发布。
+
+16. **所有平台的自动化测试必须从空白/干净的编辑器状态开始，绝不延续上一次测试的编辑状态。**
 
 如果过程中遇到错误，不要跳过，请先说明错误，再给出你准备采取的下一步动作。
 ```
@@ -102,10 +122,22 @@
 请继续帮我登录百家号账号，使用有头模式，账号名用 `creator`。
 ```
 
+```text
+请继续帮我登录什么值得买账号，使用有头模式，账号名用 `creator`。
+```
+
+```text
+请继续帮我登录头条号账号，使用有头模式，账号名用 `creator`。
+```
+
+```text
+请继续帮我登录携程账号，使用有头模式，账号名用 `creator`。
+```
+
 ### 做一次 CLI 可用性检查
 
 ```text
-请检查 bilibili、douyin、kuaishou、xiaohongshu、baijiahao 五个平台的 CLI 入口是否都可用，并告诉我缺什么依赖。
+请检查 bilibili、douyin、kuaishou、xiaohongshu、baijiahao、smzdm、toutiao、ctrip 八个平台的 CLI 入口是否都可用，并告诉我缺什么依赖。
 ```
 
 ### 做一次真实上传
@@ -120,6 +152,19 @@
 
 ```text
 请使用 baijiahao CLI，帮我发布一篇图文文章，标题是"测试文章"，正文是"这是一篇测试正文"，图片用 images/ 目录下的图片，使用有头模式。
+```
+
+```text
+请使用 smzdm CLI，帮我发布一篇图文文章，标题是"测试文章"，正文是"这是一篇测试正文"，图片用 videos/ 目录下的 demo.png demo1.png demo2.png，使用有头模式。
+```
+
+```text
+请使用 toutiao CLI，帮我发布一篇图文文章，标题是"测试文章"，正文是"这是一篇测试正文"，图片用 videos/ 目录下的 demo.png，使用有头模式。
+```
+
+```text
+请使用 ctrip CLI，帮我发布一篇图文笔记，标题是"测试笔记"，正文是"这是一篇测试正文"，图片用 videos/ 目录下的 demo.png demo1.png，使用有头模式。
+```
 ```
 
 ## OpenClaw / Codex / Claude Code 使用建议
@@ -140,9 +185,9 @@
 
 - 建议先让仓库成为当前 workspace
 - 再发完整启动提示词
-- 后续按“安装 -> 验证 -> 登录 -> 上传”顺序继续给任务
+- 后续按"安装 -> 验证 -> 登录 -> 上传"顺序继续给任务
 
-## 为什么不按平台拆四套提示词
+## 为什么不按平台拆八套提示词
 
 因为这个项目现在已经有统一的 CLI 主线。
 
@@ -160,5 +205,8 @@
 - `kuaishou`
 - `xiaohongshu`
 - `baijiahao`
+- `smzdm`
+- `toutiao`
+- `ctrip`
 
-这样比给用户准备五套平台 prompt 更稳，也更容易维护。
+这样比给用户准备七套平台 prompt 更稳，也更容易维护。

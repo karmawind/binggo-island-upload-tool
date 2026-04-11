@@ -6,6 +6,10 @@
 - `kuaishou`
 - `xiaohongshu`
 - `bilibili`
+- `baijiahao`
+- `smzdm`
+- `toutiao`
+- `ctrip`
 
 实现说明：
 
@@ -16,6 +20,10 @@
   - `skills/kuaishou-upload/`
   - `skills/xiaohongshu-upload/`
   - `skills/bilibili-upload/`
+  - `skills/baijiahao-upload/`
+  - `skills/smzdm-upload/`
+  - `skills/toutiao-upload/`
+  - `skills/ctrip-upload/`
 
 ## 安装 CLI 入口
 
@@ -32,6 +40,10 @@ sau douyin --help
 sau kuaishou --help
 sau xiaohongshu --help
 sau bilibili --help
+sau baijiahao --help
+sau smzdm --help
+sau toutiao --help
+sau ctrip --help
 ```
 
 ## 安装 patchright 浏览器
@@ -78,7 +90,57 @@ sau bilibili check --account <account_name>
 sau bilibili upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tid 249 --tags 足球,测试
 ```
 
-补充说明：
+## 百家号 CLI 子命令
+
+```bash
+sau baijiahao login --account <account_name> --headed
+sau baijiahao check --account <account_name>
+sau baijiahao upload-article --account <account_name> --title "文章标题" --content "文章正文" --images img1.png img2.png --tags 测试,示例 --headed
+```
+
+- 推荐使用 `--headed` 模式
+- 图文使用 UEditor 编辑器，上传图片时自动选择封面
+- 支持定时发布（`--schedule`）
+
+## 什么值得买 CLI 子命令
+
+```bash
+sau smzdm login --account <account_name> --headed
+sau smzdm check --account <account_name>
+sau smzdm upload-article --account <account_name> --title "文章标题" --content "文章正文" --images img1.png img2.png --headed
+```
+
+- 推荐使用 `--headed` 模式
+- 图文使用 ProseMirror 编辑器
+- 文章发布后需人工审核，不支持定时发布
+- 图片建议 500KB~8MB
+
+## 头条号 CLI 子命令
+
+```bash
+sau toutiao login --account <account_name> --headed
+sau toutiao check --account <account_name>
+sau toutiao upload-article --account <account_name> --title "文章标题" --content "文章正文" --images img1.png img2.png --headed
+```
+
+- 推荐使用 `--headed` 模式
+- 图文使用 ProseMirror 编辑器
+- 发布需两步确认（预览并发布 → 确认发布）
+- 文章发布后需人工审核，不支持定时发布
+- 图片不超过 20MB
+
+## 携程 CLI 子命令
+
+```bash
+sau ctrip login --account <account_name> --headed
+sau ctrip check --account <account_name>
+sau ctrip upload-article --account <account_name> --title "文章标题" --content "文章正文" --images img1.png img2.png --headed
+```
+
+- 推荐使用 `--headed` 模式
+- 图文使用 Draft.js 编辑器，标题和描述均为 DraftEditor contenteditable 组件
+- 图片使用 ant-upload 组件上传，最多 20 张，推荐宽高比 3:4~2:1
+- 不支持定时发布
 
 - `creator` 之类的名字只是示例值，真正传的是用户自定义的 `account_name`
 - 一个 `account_name` 对应一个账号文件，可以准备多个账号并发使用

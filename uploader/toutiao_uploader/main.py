@@ -39,11 +39,9 @@ async def toutiao_cookie_gen(account_file, headless: bool = False):
                     toutiao_logger.success(f"检测到登录成功，当前页面: {url[:60]}")
                     break
             else:
-                toutiao_logger.warning("等待超时，尝试通过 pause 等待手动确认")
-                await page.pause()
+                toutiao_logger.warning("等待登录超时（5分钟）")
         except Exception:
-            toutiao_logger.warning("等待异常，尝试通过 pause 等待手动确认")
-            await page.pause()
+            toutiao_logger.warning("等待登录异常")
 
         await asyncio.sleep(2)
         account_path = os.path.dirname(account_file)

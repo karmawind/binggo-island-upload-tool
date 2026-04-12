@@ -5,7 +5,7 @@
         <div class="sidebar">
           <div class="logo">
             <img v-show="isCollapse" src="/vite.svg" alt="Logo" class="logo-img">
-            <h2 v-show="!isCollapse">自媒体自动化运营系统</h2>
+            <h2 v-show="!isCollapse">灵感岛推文分发器</h2>
           </div>
           <el-menu
             :router="true"
@@ -31,6 +31,14 @@
             <el-menu-item index="/publish-center">
               <el-icon><Upload /></el-icon>
               <span>发布中心</span>
+            </el-menu-item>
+            <el-menu-item index="/article-publish">
+              <el-icon><EditPen /></el-icon>
+              <span>图文发布</span>
+            </el-menu-item>
+            <el-menu-item index="/article-management">
+              <el-icon><Document /></el-icon>
+              <span>帖子管理</span>
             </el-menu-item>
             <el-menu-item index="/about">
               <el-icon><DataAnalysis /></el-icon>
@@ -63,7 +71,7 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   HomeFilled, User, DataAnalysis,
-  Fold, Picture, Upload
+  Fold, Picture, Upload, EditPen, Document
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

@@ -39,15 +39,13 @@ async def smzdm_cookie_gen(account_file, headless: bool = False):
             )
             smzdm_logger.success("检测到登录成功")
         except Exception:
-            smzdm_logger.warning("未检测到登录标识，尝试通过 pause 等待手动确认")
-            await page.pause()
+            smzdm_logger.warning("未检测到登录标识（等待超时），继续尝试保存 cookie...")
 
         # 验证能否访问发帖页
         await page.goto(SMZDM_EDITOR_URL)
         await page.wait_for_timeout(3000)
         if "login" in page.url.lower() or "passport" in page.url.lower():
             smzdm_logger.error("登录可能未成功，被重定向到登录页")
-            await page.pause()
 
         account_path = os.path.dirname(account_file)
         os.makedirs(account_path, exist_ok=True)

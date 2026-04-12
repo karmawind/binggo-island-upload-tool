@@ -13,29 +13,47 @@ from utils.log import baijiahao_logger
 from utils.network import async_retry
 
 
-async def baijiahao_cookie_gen(account_file):
+async def baijiahao_cookie_gen(account_file, headless=False):
     async with async_playwright() as playwright:
         options = {
             'args': [
                 '--lang en-GB'
             ],
-            'headless': LOCAL_CHROME_HEADLESS,  # Set headless option here
+            'headless': headless,
         }
-        # Make sure to run headed.
         browser = await playwright.chromium.launch(**options)
-        # Setup context however you like.
-        context = await browser.new_context()  # Pass any options
+        context = await browser.new_context()
         context = await set_init_script(context)
-        # Pause the page, and start recording manually.
         page = await context.new_page()
         await page.goto("https://baijiahao.baidu.com/builder/theme/bjh/login")
-        await page.pause()
-        # 点击调试器的继续，保存cookie
+        baijiahao_logger.info("请在浏览器中完成登录...")
+
+        # 等待用户登录成功（检测 URL 离开登录页或出现登录后标识）
+        for i in range(120):  # 最多等 2 分钟
+            await asyncio.sleep(1)
+            url = page.url
+            # 登录成功后会跳转到首页或其他页面
+            if 'login' not in url.lower() and 'auth' not in url.lower():
+                baijiahao_logger.success("检测到登录成功（URL 已跳转）")
+                break
+            # 也检测页面是否出现登录后才有的元素
+            try:
+                if await page.get_by_text('发布内容').count() > 0 or await page.get_by_text('作品管理').count() > 0:
+                    baijiahao_logger.success("检测到登录成功（发现已登录元素）")
+                    break
+            except:
+                pass
+        else:
+            baijiahao_logger.warning("等待登录超时（2分钟）")
+
         await context.storage_state(path=account_file)
         baijiahao_logger.success("cookie saved")
+        await browser.close()
 
 
 async def cookie_auth(account_file):
+    if not os.path.exists(account_file):
+        return False
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=LOCAL_CHROME_HEADLESS)
         context = await browser.new_context(storage_state=account_file)

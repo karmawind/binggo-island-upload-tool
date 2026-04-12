@@ -5,12 +5,16 @@ export const useAccountStore = defineStore('account', () => {
   // 存储所有账号信息
   const accounts = ref([])
   
-  // 平台类型映射
+  // 平台类型映射（1-4 视频，5-8 图文）
   const platformTypes = {
     1: '小红书',
     2: '视频号',
     3: '抖音',
-    4: '快手'
+    4: '快手',
+    5: '百家号',
+    6: '什么值得买',
+    7: '头条号',
+    8: '携程'
   }
   
   // 设置账号列表

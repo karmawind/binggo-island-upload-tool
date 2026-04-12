@@ -199,8 +199,8 @@ class EditorPage:
         paragraphs = content.split("\n")
         full_text = "\n".join(p.strip() for p in paragraphs if p.strip())
 
-        # 用键盘逐字输入（Draft.js 需要真实键盘事件）
-        await self.page.keyboard.type(full_text[:3000], delay=10)
+        # 使用 insertText 一次性输入（Draft.js 支持此方式，比逐字输入快得多）
+        await self.page.keyboard.insert_text(full_text[:3000])
 
         # 验证正文是否真的填入了
         await asyncio.sleep(0.5)

@@ -27,6 +27,16 @@ const routes = [
     component: PublishCenter
   },
   {
+    path: '/article-publish',
+    name: 'ArticlePublish',
+    component: () => import('../views/ArticlePublish.vue')
+  },
+  {
+    path: '/article-management',
+    name: 'ArticleManagement',
+    component: () => import('../views/ArticleManagement.vue')
+  },
+  {
     path: '/about',
     name: 'About',
     component: About

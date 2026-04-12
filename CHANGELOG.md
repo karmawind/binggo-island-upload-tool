@@ -2,6 +2,53 @@
 
 All notable changes to `social-auto-upload` will be documented in this file.
 
+## [0.2.0] - 2026-04-12
+
+### Added
+
+- **前端可视化图文发布系统** — 将 CLI 图文发布功能集成到 Web 前端，实现 8 平台统一管理
+- **数据库扩展** — `article_posts`（帖子）和 `article_images`（图片）表，`platforms`（多平台）和 `scheduled_at`（定时）字段
+- **后端图文发布 API** — 12+ 新端点（`/postArticle`、`/uploadImage`、`/saveArticlePost`、`/scheduleArticles`、`/importArticles` 等）
+- **多平台并行分发** — 一篇帖子同时发到多个平台（百家号+什么值得买+头条号+携程），每平台独立线程
+- **定时排期调度器** — 批量排期自动发布，后台线程每 60 秒检查到期帖子
+- **CSV 批量导入** — 通过上传 CSV 文件批量创建帖子
+- **CLI 登录集成到前端** — 前端添加图文平台账号时自动调用 CLI 登录，SSE 实时推送进度
+- **编辑状态持久化** — Pinia `articleDraft` store，路由切换不丢失编辑状态
+- **前端页面** — `ArticlePublish.vue`（多平台图文发布）、`ArticleManagement.vue`（帖子管理/筛选/排期/批量发布/CSV导入）
+
+### Changed
+
+- 前端系统名称改为"灵感岛推文分发器"，支持 8 平台（1=小红书 2=视频号 3=抖音 4=快手 5=百家号 6=什么值得买 7=头条号 8=携程）
+- `AccountManagement.vue` 扩展至 8 平台 Tab，所有账号操作列新增"重新认证"按钮
+- 什么值得买标题截断从 80 字改为 30 字（平台限制）
+- 携程正文输入从 `keyboard.type()` 逐字输入改为 `keyboard.insert_text()` 一次性输入
+- `start.bat` 改为纯英文，自动创建必要目录
+
+### Key Fixes
+
+- **`page.pause()` 不能用于生产环境** ⚠️ 最关键修复 — 百家号/什么值得买/头条号的登录函数都用了 `page.pause()` 等待用户操作，在后端 subprocess 中完全无效（浏览器打开即关闭）。全部改为轮询检测页面状态
+- **Cookie 新鲜度误判** — 旧 cookie 文件导致重新认证时误判为成功。新增 10 秒修改时间检查
+- **重新认证重复 INSERT** — 原逻辑只有 INSERT，重新认证时主键冲突。改为先查再决定 INSERT/UPDATE
+- **数据库路径不一致** — `createTable.py` 用相对路径，从不同目录运行会创建错误位置的数据库。统一为 `__file__` 绝对路径
+- **Pinia storeToRefs 陷阱** ⚠️ — `ref()` 属性通过 `store.property` 访问时被 Pinia 自动解包，`.value` 为 `undefined` 导致 TypeError 静默崩溃（按钮"无反应"）。改用 `storeToRefs()` 解构
+
+### 端点一览
+
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/uploadImage` | POST | 上传图文图片 |
+| `/getImages` | GET | 获取所有图片 |
+| `/deleteImage` | GET | 删除图片 |
+| `/postArticle` | POST | 发布图文（单平台/多平台） |
+| `/articleTaskStatus` | GET | 查询发布任务进度 |
+| `/getArticlePosts` | GET | 获取所有帖子 |
+| `/saveArticlePost` | POST | 保存草稿 |
+| `/updateArticlePost` | POST | 更新帖子 |
+| `/deleteArticlePost` | GET | 删除帖子 |
+| `/loginArticleAccount` | GET (SSE) | 图文平台 CLI 登录 |
+| `/scheduleArticles` | POST | 批量排期 |
+| `/importArticles` | POST | CSV 批量导入 |
+
 ## [0.1.5] - 2026-04-11
 
 ### Added

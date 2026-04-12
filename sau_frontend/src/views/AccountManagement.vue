@@ -64,6 +64,7 @@
                     <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
                     <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
                     <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
+                    <el-button size="small" type="warning" @click="handleReLogin(scope.row)">重新认证</el-button>
                     <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
                   </template>
                 </el-table-column>
@@ -134,6 +135,7 @@
                     <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
                     <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
                     <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
+                    <el-button size="small" type="warning" @click="handleReLogin(scope.row)">重新认证</el-button>
                     <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
                   </template>
                 </el-table-column>
@@ -204,6 +206,7 @@
                     <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
                     <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
                     <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
+                    <el-button size="small" type="warning" @click="handleReLogin(scope.row)">重新认证</el-button>
                     <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
                   </template>
                 </el-table-column>
@@ -274,6 +277,7 @@
                     <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
                     <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
                     <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
+                    <el-button size="small" type="warning" @click="handleReLogin(scope.row)">重新认证</el-button>
                     <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
                   </template>
                 </el-table-column>
@@ -344,6 +348,7 @@
                     <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
                     <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
                     <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
+                    <el-button size="small" type="warning" @click="handleReLogin(scope.row)">重新认证</el-button>
                     <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
                   </template>
                 </el-table-column>
@@ -353,6 +358,126 @@
             <div v-else class="empty-data">
               <el-empty description="暂无小红书账号数据" />
             </div>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="百家号" name="baijiahao">
+          <div class="account-list-container">
+            <div class="account-search">
+              <el-input v-model="searchKeyword" placeholder="输入名称或账号搜索" prefix-icon="Search" clearable @clear="handleSearch" @input="handleSearch" />
+              <div class="action-buttons">
+                <el-button type="primary" @click="handleAddAccount">添加账号</el-button>
+                <el-button type="info" @click="fetchAccounts" :loading="false">
+                  <el-icon :class="{ 'is-loading': appStore.isAccountRefreshing }"><Refresh /></el-icon>
+                  <span v-if="appStore.isAccountRefreshing">刷新中</span>
+                </el-button>
+              </div>
+            </div>
+            <div v-if="filteredBaijiahaoAccounts.length > 0" class="account-list">
+              <el-table :data="filteredBaijiahaoAccounts" style="width: 100%">
+                <el-table-column label="头像" width="80"><template #default="scope"><el-avatar :src="getDefaultAvatar(scope.row.name)" :size="40" /></template></el-table-column>
+                <el-table-column prop="name" label="名称" width="180" />
+                <el-table-column prop="platform" label="平台"><template #default="scope"><el-tag :type="getPlatformTagType(scope.row.platform)" effect="plain">{{ scope.row.platform }}</el-tag></template></el-table-column>
+                <el-table-column prop="status" label="状态"><template #default="scope"><el-tag :type="getStatusTagType(scope.row.status)" effect="plain" :class="{'clickable-status': isStatusClickable(scope.row.status)}" @click="handleStatusClick(scope.row)"><el-icon :class="scope.row.status === '验证中' ? 'is-loading' : ''" v-if="scope.row.status === '验证中'"><Loading /></el-icon>{{ scope.row.status }}</el-tag></template></el-table-column>
+                <el-table-column label="操作"><template #default="scope">
+                  <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                  <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
+                  <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
+                  <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                </template></el-table-column>
+              </el-table>
+            </div>
+            <div v-else class="empty-data"><el-empty description="暂无百家号账号数据" /></div>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="什么值得买" name="smzdm">
+          <div class="account-list-container">
+            <div class="account-search">
+              <el-input v-model="searchKeyword" placeholder="输入名称或账号搜索" prefix-icon="Search" clearable @clear="handleSearch" @input="handleSearch" />
+              <div class="action-buttons">
+                <el-button type="primary" @click="handleAddAccount">添加账号</el-button>
+                <el-button type="info" @click="fetchAccounts" :loading="false">
+                  <el-icon :class="{ 'is-loading': appStore.isAccountRefreshing }"><Refresh /></el-icon>
+                  <span v-if="appStore.isAccountRefreshing">刷新中</span>
+                </el-button>
+              </div>
+            </div>
+            <div v-if="filteredSmzdmAccounts.length > 0" class="account-list">
+              <el-table :data="filteredSmzdmAccounts" style="width: 100%">
+                <el-table-column label="头像" width="80"><template #default="scope"><el-avatar :src="getDefaultAvatar(scope.row.name)" :size="40" /></template></el-table-column>
+                <el-table-column prop="name" label="名称" width="180" />
+                <el-table-column prop="platform" label="平台"><template #default="scope"><el-tag :type="getPlatformTagType(scope.row.platform)" effect="plain">{{ scope.row.platform }}</el-tag></template></el-table-column>
+                <el-table-column prop="status" label="状态"><template #default="scope"><el-tag :type="getStatusTagType(scope.row.status)" effect="plain" :class="{'clickable-status': isStatusClickable(scope.row.status)}" @click="handleStatusClick(scope.row)"><el-icon :class="scope.row.status === '验证中' ? 'is-loading' : ''" v-if="scope.row.status === '验证中'"><Loading /></el-icon>{{ scope.row.status }}</el-tag></template></el-table-column>
+                <el-table-column label="操作"><template #default="scope">
+                  <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                  <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
+                  <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
+                  <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                </template></el-table-column>
+              </el-table>
+            </div>
+            <div v-else class="empty-data"><el-empty description="暂无什么值得买账号数据" /></div>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="头条号" name="toutiao">
+          <div class="account-list-container">
+            <div class="account-search">
+              <el-input v-model="searchKeyword" placeholder="输入名称或账号搜索" prefix-icon="Search" clearable @clear="handleSearch" @input="handleSearch" />
+              <div class="action-buttons">
+                <el-button type="primary" @click="handleAddAccount">添加账号</el-button>
+                <el-button type="info" @click="fetchAccounts" :loading="false">
+                  <el-icon :class="{ 'is-loading': appStore.isAccountRefreshing }"><Refresh /></el-icon>
+                  <span v-if="appStore.isAccountRefreshing">刷新中</span>
+                </el-button>
+              </div>
+            </div>
+            <div v-if="filteredToutiaoAccounts.length > 0" class="account-list">
+              <el-table :data="filteredToutiaoAccounts" style="width: 100%">
+                <el-table-column label="头像" width="80"><template #default="scope"><el-avatar :src="getDefaultAvatar(scope.row.name)" :size="40" /></template></el-table-column>
+                <el-table-column prop="name" label="名称" width="180" />
+                <el-table-column prop="platform" label="平台"><template #default="scope"><el-tag :type="getPlatformTagType(scope.row.platform)" effect="plain">{{ scope.row.platform }}</el-tag></template></el-table-column>
+                <el-table-column prop="status" label="状态"><template #default="scope"><el-tag :type="getStatusTagType(scope.row.status)" effect="plain" :class="{'clickable-status': isStatusClickable(scope.row.status)}" @click="handleStatusClick(scope.row)"><el-icon :class="scope.row.status === '验证中' ? 'is-loading' : ''" v-if="scope.row.status === '验证中'"><Loading /></el-icon>{{ scope.row.status }}</el-tag></template></el-table-column>
+                <el-table-column label="操作"><template #default="scope">
+                  <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                  <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
+                  <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
+                  <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                </template></el-table-column>
+              </el-table>
+            </div>
+            <div v-else class="empty-data"><el-empty description="暂无头条号账号数据" /></div>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="携程" name="ctrip">
+          <div class="account-list-container">
+            <div class="account-search">
+              <el-input v-model="searchKeyword" placeholder="输入名称或账号搜索" prefix-icon="Search" clearable @clear="handleSearch" @input="handleSearch" />
+              <div class="action-buttons">
+                <el-button type="primary" @click="handleAddAccount">添加账号</el-button>
+                <el-button type="info" @click="fetchAccounts" :loading="false">
+                  <el-icon :class="{ 'is-loading': appStore.isAccountRefreshing }"><Refresh /></el-icon>
+                  <span v-if="appStore.isAccountRefreshing">刷新中</span>
+                </el-button>
+              </div>
+            </div>
+            <div v-if="filteredCtripAccounts.length > 0" class="account-list">
+              <el-table :data="filteredCtripAccounts" style="width: 100%">
+                <el-table-column label="头像" width="80"><template #default="scope"><el-avatar :src="getDefaultAvatar(scope.row.name)" :size="40" /></template></el-table-column>
+                <el-table-column prop="name" label="名称" width="180" />
+                <el-table-column prop="platform" label="平台"><template #default="scope"><el-tag :type="getPlatformTagType(scope.row.platform)" effect="plain">{{ scope.row.platform }}</el-tag></template></el-table-column>
+                <el-table-column prop="status" label="状态"><template #default="scope"><el-tag :type="getStatusTagType(scope.row.status)" effect="plain" :class="{'clickable-status': isStatusClickable(scope.row.status)}" @click="handleStatusClick(scope.row)"><el-icon :class="scope.row.status === '验证中' ? 'is-loading' : ''" v-if="scope.row.status === '验证中'"><Loading /></el-icon>{{ scope.row.status }}</el-tag></template></el-table-column>
+                <el-table-column label="操作"><template #default="scope">
+                  <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                  <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
+                  <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
+                  <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                </template></el-table-column>
+              </el-table>
+            </div>
+            <div v-else class="empty-data"><el-empty description="暂无携程账号数据" /></div>
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -379,6 +504,10 @@
             <el-option label="抖音" value="抖音" />
             <el-option label="视频号" value="视频号" />
             <el-option label="小红书" value="小红书" />
+            <el-option label="百家号" value="百家号" />
+            <el-option label="什么值得买" value="什么值得买" />
+            <el-option label="头条号" value="头条号" />
+            <el-option label="携程" value="携程" />
           </el-select>
         </el-form-item>
         <el-form-item label="名称" prop="name">
@@ -389,20 +518,32 @@
           />
         </el-form-item>
         
-        <!-- 二维码显示区域 -->
+        <!-- 二维码 / 登录引导显示区域 -->
         <div v-if="sseConnecting" class="qrcode-container">
+          <!-- 视频平台：二维码 -->
           <div v-if="qrCodeData && !loginStatus" class="qrcode-wrapper">
             <p class="qrcode-tip">请使用对应平台APP扫描二维码登录</p>
             <img :src="qrCodeData" alt="登录二维码" class="qrcode-image" />
           </div>
-          <div v-else-if="!qrCodeData && !loginStatus" class="loading-wrapper">
-            <el-icon class="is-loading"><Refresh /></el-icon>
-            <span>请求中...</span>
+          <!-- 图文平台：文字引导消息 -->
+          <div v-else-if="loginMessages.length > 0 && !loginStatus" class="guide-wrapper">
+            <el-icon class="is-loading" style="font-size: 32px; margin-bottom: 12px"><Refresh /></el-icon>
+            <div class="guide-messages">
+              <p v-for="(msg, idx) in loginMessages" :key="idx" class="guide-msg">{{ msg }}</p>
+            </div>
+            <p class="guide-tip">请在弹出的浏览器窗口中完成登录</p>
           </div>
+          <!-- 等待中 -->
+          <div v-else-if="!qrCodeData && !loginStatus && loginMessages.length === 0" class="loading-wrapper">
+            <el-icon class="is-loading"><Refresh /></el-icon>
+            <span>正在启动浏览器...</span>
+          </div>
+          <!-- 成功 -->
           <div v-else-if="loginStatus === '200'" class="success-wrapper">
             <el-icon><CircleCheckFilled /></el-icon>
-            <span>添加成功</span>
+            <span>{{ loginMessages.length ? '登录成功，账号已自动创建' : '添加成功' }}</span>
           </div>
+          <!-- 失败 -->
           <div v-else-if="loginStatus === '500'" class="error-wrapper">
             <el-icon><CircleCloseFilled /></el-icon>
             <span>添加失败，请稍后再试</span>
@@ -522,7 +663,11 @@ const getPlatformTagType = (platform) => {
     '快手': 'success',
     '抖音': 'danger',
     '视频号': 'warning',
-    '小红书': 'info'
+    '小红书': 'info',
+    '百家号': '',
+    '什么值得买': 'danger',
+    '头条号': 'warning',
+    '携程': ''
   }
   return typeMap[platform] || 'info'
 }
@@ -576,6 +721,22 @@ const filteredXiaohongshuAccounts = computed(() => {
   return filteredAccounts.value.filter(account => account.platform === '小红书')
 })
 
+const filteredBaijiahaoAccounts = computed(() => {
+  return filteredAccounts.value.filter(account => account.platform === '百家号')
+})
+
+const filteredSmzdmAccounts = computed(() => {
+  return filteredAccounts.value.filter(account => account.platform === '什么值得买')
+})
+
+const filteredToutiaoAccounts = computed(() => {
+  return filteredAccounts.value.filter(account => account.platform === '头条号')
+})
+
+const filteredCtripAccounts = computed(() => {
+  return filteredAccounts.value.filter(account => account.platform === '携程')
+})
+
 // 搜索处理
 const handleSearch = () => {
   // 搜索逻辑已通过计算属性实现
@@ -604,6 +765,7 @@ const rules = {
 const sseConnecting = ref(false)
 const qrCodeData = ref('')
 const loginStatus = ref('')
+const loginMessages = ref([])  // 图文平台登录引导消息
 
 // 添加账号
 const handleAddAccount = () => {
@@ -618,6 +780,7 @@ const handleAddAccount = () => {
   sseConnecting.value = false
   qrCodeData.value = ''
   loginStatus.value = ''
+  loginMessages.value = []
   dialogVisible.value = true
 }
 
@@ -744,6 +907,7 @@ const handleReLogin = (row) => {
   sseConnecting.value = false
   qrCodeData.value = ''
   loginStatus.value = ''
+  loginMessages.value = []
 
   // 显示对话框
   dialogVisible.value = true
@@ -786,14 +950,28 @@ const connectSSE = (platform, name) => {
     '小红书': '1',
     '视频号': '2',
     '抖音': '3',
-    '快手': '4'
+    '快手': '4',
+    '百家号': '5',
+    '什么值得买': '6',
+    '头条号': '7',
+    '携程': '8'
   }
 
   const type = platformTypeMap[platform] || '1'
 
+  // 图文平台（5-8）走新的 CLI 登录端点
+  const isArticlePlatform = ['5', '6', '7', '8'].includes(type)
+
   // 创建SSE连接
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409'
-  const url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}`
+  let url
+  if (isArticlePlatform) {
+    // 图文平台：调用 CLI 登录
+    url = `${baseUrl}/loginArticleAccount?type=${type}&name=${encodeURIComponent(name)}`
+  } else {
+    // 视频平台：原有 QR 码登录
+    url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}`
+  }
 
   eventSource = new EventSource(url)
 
@@ -801,6 +979,37 @@ const connectSSE = (platform, name) => {
   eventSource.onmessage = (event) => {
     const data = event.data
 
+    // 图文平台：显示文字引导消息
+    if (isArticlePlatform) {
+      // 收到状态码
+      if (data === '200' || data === '500') {
+        loginStatus.value = data
+        if (data === '200') {
+          setTimeout(() => {
+            closeSSEConnection()
+            setTimeout(() => {
+              dialogVisible.value = false
+              sseConnecting.value = false
+              ElMessage.success('登录成功，账号已自动创建')
+              fetchAccounts()
+            }, 1000)
+          }, 1000)
+        } else {
+          closeSSEConnection()
+          setTimeout(() => {
+            sseConnecting.value = false
+            qrCodeData.value = ''
+            loginStatus.value = ''
+          }, 2000)
+        }
+      } else {
+        // 文字引导消息，显示到二维码区域
+        loginMessages.value.push(data)
+      }
+      return
+    }
+
+    // 视频平台：原有逻辑
     // 如果还没有二维码数据，且数据长度较长，认为是二维码
     if (!qrCodeData.value && data.length > 100) {
       try {
@@ -884,7 +1093,11 @@ const submitAccountForm = () => {
             '小红书': 1,
             '视频号': 2,
             '抖音': 3,
-            '快手': 4
+            '快手': 4,
+            '百家号': 5,
+            '什么值得买': 6,
+            '头条号': 7,
+            '携程': 8
           };
           const type = platformTypeMap[accountForm.platform] || 1;
 
@@ -1049,6 +1262,34 @@ onBeforeUnmount(() => {
     
     .error-wrapper .el-icon {
       color: #f56c6c;
+    }
+
+    .guide-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+
+      .guide-messages {
+        max-height: 200px;
+        overflow-y: auto;
+        width: 100%;
+        max-width: 400px;
+
+        .guide-msg {
+          margin: 4px 0;
+          font-size: 13px;
+          color: #606266;
+          line-height: 1.6;
+        }
+      }
+
+      .guide-tip {
+        margin-top: 12px;
+        color: #409eff;
+        font-size: 14px;
+        font-weight: 500;
+      }
     }
   }
 }

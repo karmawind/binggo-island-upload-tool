@@ -115,7 +115,7 @@ class EditorPage:
         smzdm_logger.info(f"填写标题: {title[:50]}")
         title_input = self.page.locator("textarea.article-title")
         await title_input.click(timeout=10000)
-        await title_input.fill(title[:80])
+        await title_input.fill(title[:30])
         smzdm_logger.success("标题已填写")
 
     async def fill_content(self, content: str):

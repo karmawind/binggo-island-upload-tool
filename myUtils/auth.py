@@ -10,6 +10,10 @@ from utils.base_social_media import set_init_script
 from utils.log import tencent_logger, kuaishou_logger, douyin_logger
 from pathlib import Path
 from uploader.xhs_uploader.main import sign_local
+from uploader.baijiahao_uploader.main import cookie_auth as baijiahao_cookie_auth
+from uploader.smzdm_uploader.main import cookie_auth as smzdm_cookie_auth
+from uploader.toutiao_uploader.main import cookie_auth as toutiao_cookie_auth
+from uploader.ctrip_uploader.main import cookie_auth as ctrip_cookie_auth
 
 
 async def cookie_auth_douyin(account_file):
@@ -103,19 +107,32 @@ async def cookie_auth_xhs(account_file):
 
 
 async def check_cookie(type, file_path):
+    cookie_path = Path(BASE_DIR / "cookiesFile" / file_path)
     match type:
         # 小红书
         case 1:
-            return await cookie_auth_xhs(Path(BASE_DIR / "cookiesFile" / file_path))
+            return await cookie_auth_xhs(cookie_path)
         # 视频号
         case 2:
-            return await cookie_auth_tencent(Path(BASE_DIR / "cookiesFile" / file_path))
+            return await cookie_auth_tencent(cookie_path)
         # 抖音
         case 3:
-            return await cookie_auth_douyin(Path(BASE_DIR / "cookiesFile" / file_path))
+            return await cookie_auth_douyin(cookie_path)
         # 快手
         case 4:
-            return await cookie_auth_ks(Path(BASE_DIR / "cookiesFile" / file_path))
+            return await cookie_auth_ks(cookie_path)
+        # 百家号
+        case 5:
+            return await baijiahao_cookie_auth(str(cookie_path))
+        # 什么值得买
+        case 6:
+            return await smzdm_cookie_auth(str(cookie_path))
+        # 头条号
+        case 7:
+            return await toutiao_cookie_auth(str(cookie_path))
+        # 携程
+        case 8:
+            return await ctrip_cookie_auth(str(cookie_path))
         case _:
             return False
 

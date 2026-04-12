@@ -36,7 +36,7 @@
         <el-table-column prop="scheduled_at" label="计划时间" width="170">
           <template #default="scope">
             <span v-if="scope.row.scheduled_at">{{ scope.row.scheduled_at }}</span>
-            <span v-else style="color:#aaa">-</span>
+            <span v-else style="color:#a1a1aa">-</span>
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="170" />
@@ -230,9 +230,27 @@ const handleImport = async (event) => {
 @use '@/styles/variables.scss' as *;
 
 .article-management {
-  .page-header { margin-bottom: 20px; h1 { font-size: 24px; color: $text-primary; margin: 0; } }
+  .page-header {
+    margin-bottom: 24px;
+    h1 { font-size: 24px; font-weight: 700; color: $text-primary; margin: 0; }
+  }
 
-  .content-card { background: #fff; border-radius: 4px; box-shadow: $box-shadow-light; padding: 20px; }
+  .content-card {
+    background: $bg-color;
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-sm;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: $card-accent-gradient;
+    }
+  }
 
   .toolbar {
     display: flex; justify-content: space-between; margin-bottom: 16px;
@@ -241,9 +259,12 @@ const handleImport = async (event) => {
   }
 
   .batch-bar {
-    margin-top: 16px; padding: 12px; background: #ecf5ff; border-radius: 4px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.08), rgba(99, 102, 241, 0.08));
+    border-radius: $border-radius-sm;
     display: flex; align-items: center; justify-content: space-between;
-    span { color: #409eff; }
+    span { color: $primary-color; font-weight: 500; }
     .batch-actions { display: flex; gap: 8px; }
   }
 }

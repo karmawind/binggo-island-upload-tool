@@ -59,18 +59,33 @@
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作">
+                <el-table-column label="操作" width="200">
                   <template #default="scope">
-                    <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-                    <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
-                    <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
-                    <el-button size="small" type="warning" @click="handleReLogin(scope.row)">重新认证</el-button>
-                    <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                    <div class="action-cell">
+                      <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                      <el-button size="small" type="warning" plain @click="handleReLogin(scope.row)">重新认证</el-button>
+                      <el-dropdown trigger="click">
+                        <el-button size="small" :icon="More" circle />
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item @click="handleDownloadCookie(scope.row)">
+                              <el-icon><Download /></el-icon>下载Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item @click="handleUploadCookie(scope.row)">
+                              <el-icon><Upload /></el-icon>上传Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item divided @click="handleDelete(scope.row)" style="color: #ef4444">
+                              删除
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
                   </template>
                 </el-table-column>
               </el-table>
             </div>
-            
+
             <div v-else class="empty-data">
               <el-empty description="暂无账号数据" />
             </div>
@@ -130,18 +145,33 @@
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作">
+                <el-table-column label="操作" width="200">
                   <template #default="scope">
-                    <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-                    <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
-                    <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
-                    <el-button size="small" type="warning" @click="handleReLogin(scope.row)">重新认证</el-button>
-                    <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                    <div class="action-cell">
+                      <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                      <el-button size="small" type="warning" plain @click="handleReLogin(scope.row)">重新认证</el-button>
+                      <el-dropdown trigger="click">
+                        <el-button size="small" :icon="More" circle />
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item @click="handleDownloadCookie(scope.row)">
+                              <el-icon><Download /></el-icon>下载Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item @click="handleUploadCookie(scope.row)">
+                              <el-icon><Upload /></el-icon>上传Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item divided @click="handleDelete(scope.row)" style="color: #ef4444">
+                              删除
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
                   </template>
                 </el-table-column>
               </el-table>
             </div>
-            
+
             <div v-else class="empty-data">
               <el-empty description="暂无快手账号数据" />
             </div>
@@ -201,18 +231,33 @@
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作">
+                <el-table-column label="操作" width="200">
                   <template #default="scope">
-                    <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-                    <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
-                    <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
-                    <el-button size="small" type="warning" @click="handleReLogin(scope.row)">重新认证</el-button>
-                    <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                    <div class="action-cell">
+                      <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                      <el-button size="small" type="warning" plain @click="handleReLogin(scope.row)">重新认证</el-button>
+                      <el-dropdown trigger="click">
+                        <el-button size="small" :icon="More" circle />
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item @click="handleDownloadCookie(scope.row)">
+                              <el-icon><Download /></el-icon>下载Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item @click="handleUploadCookie(scope.row)">
+                              <el-icon><Upload /></el-icon>上传Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item divided @click="handleDelete(scope.row)" style="color: #ef4444">
+                              删除
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
                   </template>
                 </el-table-column>
               </el-table>
             </div>
-            
+
             <div v-else class="empty-data">
               <el-empty description="暂无抖音账号数据" />
             </div>
@@ -272,18 +317,33 @@
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作">
+                <el-table-column label="操作" width="200">
                   <template #default="scope">
-                    <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-                    <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
-                    <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
-                    <el-button size="small" type="warning" @click="handleReLogin(scope.row)">重新认证</el-button>
-                    <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                    <div class="action-cell">
+                      <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                      <el-button size="small" type="warning" plain @click="handleReLogin(scope.row)">重新认证</el-button>
+                      <el-dropdown trigger="click">
+                        <el-button size="small" :icon="More" circle />
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item @click="handleDownloadCookie(scope.row)">
+                              <el-icon><Download /></el-icon>下载Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item @click="handleUploadCookie(scope.row)">
+                              <el-icon><Upload /></el-icon>上传Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item divided @click="handleDelete(scope.row)" style="color: #ef4444">
+                              删除
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
                   </template>
                 </el-table-column>
               </el-table>
             </div>
-            
+
             <div v-else class="empty-data">
               <el-empty description="暂无视频号账号数据" />
             </div>
@@ -343,18 +403,33 @@
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作">
+                <el-table-column label="操作" width="200">
                   <template #default="scope">
-                    <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-                    <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
-                    <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
-                    <el-button size="small" type="warning" @click="handleReLogin(scope.row)">重新认证</el-button>
-                    <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                    <div class="action-cell">
+                      <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                      <el-button size="small" type="warning" plain @click="handleReLogin(scope.row)">重新认证</el-button>
+                      <el-dropdown trigger="click">
+                        <el-button size="small" :icon="More" circle />
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item @click="handleDownloadCookie(scope.row)">
+                              <el-icon><Download /></el-icon>下载Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item @click="handleUploadCookie(scope.row)">
+                              <el-icon><Upload /></el-icon>上传Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item divided @click="handleDelete(scope.row)" style="color: #ef4444">
+                              删除
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
                   </template>
                 </el-table-column>
               </el-table>
             </div>
-            
+
             <div v-else class="empty-data">
               <el-empty description="暂无小红书账号数据" />
             </div>
@@ -379,11 +454,26 @@
                 <el-table-column prop="name" label="名称" width="180" />
                 <el-table-column prop="platform" label="平台"><template #default="scope"><el-tag :type="getPlatformTagType(scope.row.platform)" effect="plain">{{ scope.row.platform }}</el-tag></template></el-table-column>
                 <el-table-column prop="status" label="状态"><template #default="scope"><el-tag :type="getStatusTagType(scope.row.status)" effect="plain" :class="{'clickable-status': isStatusClickable(scope.row.status)}" @click="handleStatusClick(scope.row)"><el-icon :class="scope.row.status === '验证中' ? 'is-loading' : ''" v-if="scope.row.status === '验证中'"><Loading /></el-icon>{{ scope.row.status }}</el-tag></template></el-table-column>
-                <el-table-column label="操作"><template #default="scope">
-                  <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-                  <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
-                  <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
-                  <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                <el-table-column label="操作" width="160"><template #default="scope">
+                    <div class="action-cell">
+                      <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                      <el-dropdown trigger="click">
+                        <el-button size="small" :icon="More" circle />
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item @click="handleDownloadCookie(scope.row)">
+                              <el-icon><Download /></el-icon>下载Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item @click="handleUploadCookie(scope.row)">
+                              <el-icon><Upload /></el-icon>上传Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item divided @click="handleDelete(scope.row)" style="color: #ef4444">
+                              删除
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
                 </template></el-table-column>
               </el-table>
             </div>
@@ -409,11 +499,26 @@
                 <el-table-column prop="name" label="名称" width="180" />
                 <el-table-column prop="platform" label="平台"><template #default="scope"><el-tag :type="getPlatformTagType(scope.row.platform)" effect="plain">{{ scope.row.platform }}</el-tag></template></el-table-column>
                 <el-table-column prop="status" label="状态"><template #default="scope"><el-tag :type="getStatusTagType(scope.row.status)" effect="plain" :class="{'clickable-status': isStatusClickable(scope.row.status)}" @click="handleStatusClick(scope.row)"><el-icon :class="scope.row.status === '验证中' ? 'is-loading' : ''" v-if="scope.row.status === '验证中'"><Loading /></el-icon>{{ scope.row.status }}</el-tag></template></el-table-column>
-                <el-table-column label="操作"><template #default="scope">
-                  <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-                  <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
-                  <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
-                  <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                <el-table-column label="操作" width="160"><template #default="scope">
+                    <div class="action-cell">
+                      <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                      <el-dropdown trigger="click">
+                        <el-button size="small" :icon="More" circle />
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item @click="handleDownloadCookie(scope.row)">
+                              <el-icon><Download /></el-icon>下载Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item @click="handleUploadCookie(scope.row)">
+                              <el-icon><Upload /></el-icon>上传Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item divided @click="handleDelete(scope.row)" style="color: #ef4444">
+                              删除
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
                 </template></el-table-column>
               </el-table>
             </div>
@@ -439,11 +544,26 @@
                 <el-table-column prop="name" label="名称" width="180" />
                 <el-table-column prop="platform" label="平台"><template #default="scope"><el-tag :type="getPlatformTagType(scope.row.platform)" effect="plain">{{ scope.row.platform }}</el-tag></template></el-table-column>
                 <el-table-column prop="status" label="状态"><template #default="scope"><el-tag :type="getStatusTagType(scope.row.status)" effect="plain" :class="{'clickable-status': isStatusClickable(scope.row.status)}" @click="handleStatusClick(scope.row)"><el-icon :class="scope.row.status === '验证中' ? 'is-loading' : ''" v-if="scope.row.status === '验证中'"><Loading /></el-icon>{{ scope.row.status }}</el-tag></template></el-table-column>
-                <el-table-column label="操作"><template #default="scope">
-                  <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-                  <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
-                  <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
-                  <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                <el-table-column label="操作" width="160"><template #default="scope">
+                    <div class="action-cell">
+                      <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                      <el-dropdown trigger="click">
+                        <el-button size="small" :icon="More" circle />
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item @click="handleDownloadCookie(scope.row)">
+                              <el-icon><Download /></el-icon>下载Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item @click="handleUploadCookie(scope.row)">
+                              <el-icon><Upload /></el-icon>上传Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item divided @click="handleDelete(scope.row)" style="color: #ef4444">
+                              删除
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
                 </template></el-table-column>
               </el-table>
             </div>
@@ -469,11 +589,26 @@
                 <el-table-column prop="name" label="名称" width="180" />
                 <el-table-column prop="platform" label="平台"><template #default="scope"><el-tag :type="getPlatformTagType(scope.row.platform)" effect="plain">{{ scope.row.platform }}</el-tag></template></el-table-column>
                 <el-table-column prop="status" label="状态"><template #default="scope"><el-tag :type="getStatusTagType(scope.row.status)" effect="plain" :class="{'clickable-status': isStatusClickable(scope.row.status)}" @click="handleStatusClick(scope.row)"><el-icon :class="scope.row.status === '验证中' ? 'is-loading' : ''" v-if="scope.row.status === '验证中'"><Loading /></el-icon>{{ scope.row.status }}</el-tag></template></el-table-column>
-                <el-table-column label="操作"><template #default="scope">
-                  <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-                  <el-button size="small" type="primary" :icon="Download" @click="handleDownloadCookie(scope.row)">下载Cookie</el-button>
-                  <el-button size="small" type="info" :icon="Upload" @click="handleUploadCookie(scope.row)">上传Cookie</el-button>
-                  <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                <el-table-column label="操作" width="160"><template #default="scope">
+                    <div class="action-cell">
+                      <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                      <el-dropdown trigger="click">
+                        <el-button size="small" :icon="More" circle />
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item @click="handleDownloadCookie(scope.row)">
+                              <el-icon><Download /></el-icon>下载Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item @click="handleUploadCookie(scope.row)">
+                              <el-icon><Upload /></el-icon>上传Cookie
+                            </el-dropdown-item>
+                            <el-dropdown-item divided @click="handleDelete(scope.row)" style="color: #ef4444">
+                              删除
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
                 </template></el-table-column>
               </el-table>
             </div>
@@ -569,7 +704,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
-import { Refresh, CircleCheckFilled, CircleCloseFilled, Download, Upload, Loading } from '@element-plus/icons-vue'
+import { Refresh, CircleCheckFilled, CircleCloseFilled, Download, Upload, Loading, More } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { accountApi } from '@/api/account'
 import { useAccountStore } from '@/stores/account'
@@ -1143,72 +1278,78 @@ onBeforeUnmount(() => {
 @use '@/styles/variables.scss' as *;
 
 @keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .account-management {
   .page-header {
-    margin-bottom: 20px;
-    
+    margin-bottom: 24px;
+
     h1 {
       font-size: 24px;
+      font-weight: 700;
       color: $text-primary;
       margin: 0;
     }
   }
-  
+
   .account-tabs {
-    background-color: #fff;
-    border-radius: 4px;
-    box-shadow: $box-shadow-light;
-    
+    background-color: $bg-color;
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-base;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: $card-accent-gradient;
+    }
+
     .account-tabs-nav {
       padding: 20px;
     }
   }
-  
+
   .account-list-container {
     .account-search {
       display: flex;
       justify-content: space-between;
       margin-bottom: 20px;
-      
-      .el-input {
-        width: 300px;
-      }
-      
+
+      .el-input { width: 300px; }
+
       .action-buttons {
         display: flex;
         gap: 10px;
-        
+
         .el-icon.is-loading {
           animation: rotate 1s linear infinite;
         }
       }
     }
-    
-    .account-list {
-      margin-bottom: 20px;
-    }
-    
-    .empty-data {
-      padding: 40px 0;
-    }
+
+    .account-list { margin-bottom: 20px; }
+    .empty-data { padding: 40px 0; }
   }
-  
-  // 二维码容器样式
+
+  .action-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
   .clickable-status {
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
 
     &:hover {
       transform: scale(1.05);
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 0 8px rgba(249, 115, 22, 0.2);
     }
   }
 
@@ -1219,50 +1360,44 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     min-height: 250px;
-    
+
     .qrcode-wrapper {
       text-align: center;
-      
+
       .qrcode-tip {
         margin-bottom: 15px;
-        color: #606266;
+        color: $text-regular;
       }
-      
+
       .qrcode-image {
         max-width: 200px;
         max-height: 200px;
-        border: 1px solid #ebeef5;
+        border: 1px solid $border-base;
+        border-radius: $border-radius-sm;
         background-color: black;
       }
     }
-    
+
     .loading-wrapper, .success-wrapper, .error-wrapper {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      
+
       .el-icon {
         font-size: 48px;
-        
+
         &.is-loading {
           animation: rotate 1s linear infinite;
         }
       }
-      
-      span {
-        font-size: 16px;
-      }
+
+      span { font-size: 16px; }
     }
-    
-    .success-wrapper .el-icon {
-      color: #67c23a;
-    }
-    
-    .error-wrapper .el-icon {
-      color: #f56c6c;
-    }
+
+    .success-wrapper .el-icon { color: $success-color; }
+    .error-wrapper .el-icon { color: $danger-color; }
 
     .guide-wrapper {
       display: flex;
@@ -1279,14 +1414,14 @@ onBeforeUnmount(() => {
         .guide-msg {
           margin: 4px 0;
           font-size: 13px;
-          color: #606266;
+          color: $text-regular;
           line-height: 1.6;
         }
       }
 
       .guide-tip {
         margin-top: 12px;
-        color: #409eff;
+        color: $primary-color;
         font-size: 14px;
         font-weight: 500;
       }

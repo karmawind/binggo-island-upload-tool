@@ -273,10 +273,11 @@ onMounted(() => {
 
 .dashboard {
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 
     h1 {
-      font-size: 24px;
+      font-size: 26px;
+      font-weight: 700;
       color: $text-primary;
       margin: 0;
     }
@@ -286,6 +287,18 @@ onMounted(() => {
     .stat-card {
       height: 140px;
       margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: $card-accent-gradient;
+      }
 
       .stat-card-content {
         display: flex;
@@ -293,22 +306,22 @@ onMounted(() => {
         margin-bottom: 15px;
 
         .stat-icon {
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          background-color: rgba($primary-color, 0.1);
+          width: 56px;
+          height: 56px;
+          border-radius: $border-radius-base;
+          background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 0.05));
           display: flex;
           justify-content: center;
           align-items: center;
-          margin-right: 15px;
+          margin-right: 16px;
 
           .el-icon {
-            font-size: 30px;
+            font-size: 26px;
             color: $primary-color;
           }
 
           &.platform-icon {
-            background-color: rgba($success-color, 0.1);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
 
             .el-icon {
               color: $success-color;
@@ -316,7 +329,7 @@ onMounted(() => {
           }
 
           &.content-icon {
-            background-color: rgba($info-color, 0.1);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.05));
 
             .el-icon {
               color: $info-color;
@@ -326,21 +339,22 @@ onMounted(() => {
 
         .stat-info {
           .stat-value {
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 28px;
+            font-weight: 700;
             color: $text-primary;
             line-height: 1.2;
           }
 
           .stat-label {
-            font-size: 14px;
+            font-size: 13px;
             color: $text-secondary;
+            margin-top: 2px;
           }
         }
       }
 
       .stat-footer {
-        border-top: 1px solid $border-lighter;
+        border-top: 1px solid #f5f5f4;
         padding-top: 10px;
 
         .stat-detail {
@@ -361,7 +375,8 @@ onMounted(() => {
 
       h2 {
         font-size: 18px;
-        margin-bottom: 15px;
+        font-weight: 600;
+        margin-bottom: 16px;
         color: $text-primary;
       }
 
@@ -372,34 +387,60 @@ onMounted(() => {
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: all 0.3s;
+        transition: all 0.25s ease;
+        position: relative;
+        overflow: hidden;
 
-        &:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        &::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: $card-accent-gradient;
+          opacity: 0;
+          transition: opacity 0.25s ease;
         }
 
-        .action-icon {
-          width: 50px;
-          height: 50px;
-          border-radius: 50%;
-          background-color: rgba($primary-color, 0.1);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          margin-bottom: 15px;
+        &:hover {
+          transform: translateY(-4px);
+          box-shadow: $shadow-md;
 
-          .el-icon {
-            font-size: 24px;
-            color: $primary-color;
+          &::before {
+            opacity: 1;
           }
         }
 
+        .action-icon {
+          width: 52px;
+          height: 52px;
+          border-radius: $border-radius-base;
+          background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(99, 102, 241, 0.05));
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-bottom: 14px;
+          transition: transform 0.25s ease;
+
+          .el-icon {
+            font-size: 24px;
+            background: $primary-gradient;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+        }
+
+        &:hover .action-icon {
+          transform: scale(1.1);
+        }
+
         .action-title {
-          font-size: 16px;
-          font-weight: bold;
+          font-size: 15px;
+          font-weight: 600;
           color: $text-primary;
-          margin-bottom: 5px;
+          margin-bottom: 4px;
         }
 
         .action-desc {
@@ -417,10 +458,11 @@ onMounted(() => {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 15px;
+        margin-bottom: 16px;
 
         h2 {
           font-size: 18px;
+          font-weight: 600;
           color: $text-primary;
           margin: 0;
         }

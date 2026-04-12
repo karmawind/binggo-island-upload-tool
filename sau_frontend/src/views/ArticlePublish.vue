@@ -350,13 +350,35 @@ const pollTaskStatus = (taskId) => {
 @use '@/styles/variables.scss' as *;
 
 .article-publish {
-  .page-header { margin-bottom: 20px; h1 { font-size: 24px; color: $text-primary; margin: 0; } }
+  .page-header {
+    margin-bottom: 24px;
+    h1 { font-size: 24px; font-weight: 700; color: $text-primary; margin: 0; }
+  }
 
   .section-card {
-    background: #fff; border-radius: 4px; box-shadow: $box-shadow-light;
-    padding: 20px; margin-bottom: 16px;
-    h3 { margin: 0 0 12px; font-size: 16px; color: $text-primary;
-      .required { color: #f56c6c; } .hint { font-size: 12px; color: $text-secondary; font-weight: normal; }
+    background: $bg-color;
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-sm;
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: $card-accent-gradient;
+    }
+
+    h3 {
+      margin: 0 0 14px;
+      font-size: 16px;
+      font-weight: 600;
+      color: $text-primary;
+      .required { color: $danger-color; }
+      .hint { font-size: 12px; color: $text-secondary; font-weight: normal; }
     }
   }
 
@@ -364,8 +386,13 @@ const pollTaskStatus = (taskId) => {
   .tags-input { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 
   .action-bar {
-    background: #fff; border-radius: 4px; box-shadow: $box-shadow-light;
-    padding: 16px 20px; display: flex; justify-content: flex-end; gap: 12px;
+    background: $bg-color;
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-sm;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
   }
 
   .progress-content {

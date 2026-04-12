@@ -396,73 +396,70 @@ onMounted(() => {
 @use '@/styles/variables.scss' as *;
 
 @keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .material-management {
-  
+
   .page-header {
-    margin-bottom: 20px;
-    
+    margin-bottom: 24px;
+
     h1 {
       font-size: 24px;
-      font-weight: 500;
+      font-weight: 700;
       color: $text-primary;
       margin: 0;
     }
   }
-  
+
   .material-list-container {
-    background-color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    
+    background-color: $bg-color;
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-base;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: $card-accent-gradient;
+    }
+
     .material-search {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
-      
-      .el-input {
-        width: 300px;
-      }
-      
+
+      .el-input { width: 300px; }
+
       .action-buttons {
         display: flex;
         gap: 10px;
-        
+
         .is-loading {
           animation: rotate 1s linear infinite;
         }
       }
     }
-    
-    .material-list {
-      margin-top: 20px;
-    }
-    
-    .empty-data {
-      padding: 40px 0;
-    }
+
+    .material-list { margin-top: 20px; }
+    .empty-data { padding: 40px 0; }
   }
-  
-  .material-upload {
-    width: 100%;
-  }
-  
+
+  .material-upload { width: 100%; }
+
   .preview-container {
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
     padding: 0 20px;
-    
+
     .file-info {
       text-align: center;
       margin-top: 20px;
@@ -472,16 +469,14 @@ onMounted(() => {
 
 .upload-form {
   padding: 0 20px;
-  
+
   .form-tip {
     font-size: 12px;
-    color: #909399;
+    color: $text-secondary;
     margin-top: 5px;
   }
-  
-  .upload-demo {
-    width: 100%;
-  }
+
+  .upload-demo { width: 100%; }
 }
 
 .dialog-footer {
@@ -490,68 +485,32 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-.upload-file-list {
-  width: 100%;
-}
+.upload-file-list { width: 100%; }
 
 .upload-file-item {
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 10px;
-  margin-bottom: 10px;
-}
-
-.upload-file-item .file-name {
-  font-size: 14px;
-  color: #606266;
-  margin-bottom: 5px;
-  display: block;
-}
-
-/* 覆盖Element Plus对话框样式 */
-:deep(.el-dialog__body) {
-  padding: 20px 0;
-}
-
-:deep(.el-dialog__header) {
-  padding-left: 20px;
-  padding-right: 20px;
-  margin-right: 0;
-}
-
-:deep(.el-dialog__footer) {
-  padding-top: 10px;
-  padding-bottom: 15px;
-}
-
-/* 修改上传进度条样式 */
-:deep(.el-progress__text) {
-  color: #303133 !important; /* 深灰色字体，确保在各种背景上都可见 */
-  font-size: 12px;
-}
-
-:deep(.el-progress--line) {
-  margin-bottom: 10px;
-}
-
-.upload-file-item {
-  border: 1px solid #dcdfe6;
-  border-radius: 6px; /* 增加圆角 */
-  padding: 12px; /* 增加内边距 */
-  margin-bottom: 12px; /* 增加外边距 */
-  background-color: #fafafa; /* 轻微背景色 */
-  transition: box-shadow 0.3s; /* 添加过渡效果 */
+  border: 1px solid $border-base;
+  border-radius: $border-radius-sm;
+  padding: 12px;
+  margin-bottom: 12px;
+  background-color: #fafaf9;
+  transition: box-shadow 0.2s ease;
 }
 
 .upload-file-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* 悬停效果 */
+  box-shadow: $shadow-sm;
 }
 
 .upload-file-item .file-name {
   font-size: 14px;
-  color: #303133; /* 深灰色字体 */
-  margin-bottom: 8px; /* 增加底部间距 */
+  color: $text-primary;
+  margin-bottom: 8px;
   display: block;
   font-weight: 500;
 }
+
+:deep(.el-dialog__body) { padding: 20px 0; }
+:deep(.el-dialog__header) { padding-left: 20px; padding-right: 20px; margin-right: 0; }
+:deep(.el-dialog__footer) { padding-top: 10px; padding-bottom: 15px; }
+:deep(.el-progress__text) { color: $text-primary !important; font-size: 12px; }
+:deep(.el-progress--line) { margin-bottom: 10px; }
 </style>

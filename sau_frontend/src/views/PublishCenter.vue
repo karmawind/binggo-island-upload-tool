@@ -1005,105 +1005,116 @@ const batchPublish = async () => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  
+
   // Tab管理区域
   .tab-management {
-    background-color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    background-color: $bg-color;
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-base;
     margin-bottom: 20px;
-    padding: 15px 20px;
-    
+    padding: 16px 20px;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: $card-accent-gradient;
+    }
+
     .tab-header {
       display: flex;
       align-items: flex-start;
       gap: 15px;
-      
+
       .tab-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 8px;
         flex: 1;
         min-width: 0;
-        
+
         .tab-item {
            display: flex;
            align-items: center;
            gap: 6px;
-           padding: 6px 12px;
-           background-color: #f5f7fa;
-           border: 1px solid #dcdfe6;
-           border-radius: 4px;
+           padding: 6px 14px;
+           background-color: #f5f5f4;
+           border: 1px solid $border-base;
+           border-radius: $border-radius-sm;
            cursor: pointer;
-           transition: all 0.3s;
+           transition: all 0.2s ease;
            font-size: 14px;
-           height: 32px;
-           
+           height: 34px;
+
            &:hover {
-             background-color: #ecf5ff;
-             border-color: #b3d8ff;
+             background-color: #fff7ed;
+             border-color: #fdba74;
            }
-           
+
            &.active {
-             background-color: #409eff;
-             border-color: #409eff;
+             background: $primary-gradient;
+             border-color: transparent;
              color: #fff;
-             
+             box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+
              .close-icon {
                color: #fff;
-               
+
                &:hover {
                  background-color: rgba(255, 255, 255, 0.2);
                }
              }
            }
-           
+
            .close-icon {
              padding: 2px;
-             border-radius: 2px;
+             border-radius: 4px;
              cursor: pointer;
-             transition: background-color 0.3s;
+             transition: background-color 0.2s ease;
              font-size: 12px;
-             
+
              &:hover {
-               background-color: rgba(0, 0, 0, 0.1);
+               background-color: rgba(0, 0, 0, 0.06);
              }
            }
          }
        }
-       
+
       .tab-actions {
         display: flex;
         gap: 10px;
         flex-shrink: 0;
-        
+
         .add-tab-btn,
         .batch-publish-btn {
           display: flex;
           align-items: center;
           gap: 4px;
-          height: 32px;
-          padding: 6px 12px;
+          height: 34px;
+          padding: 6px 14px;
           font-size: 14px;
           white-space: nowrap;
         }
       }
     }
   }
-  
+
   // 批量发布进度对话框样式
   .publish-progress {
     padding: 20px;
-    
+
     .current-publishing {
       margin: 15px 0;
       text-align: center;
-      color: #606266;
+      color: $text-regular;
     }
 
     .publish-results {
       margin-top: 20px;
-      border-top: 1px solid #EBEEF5;
+      border-top: 1px solid #f5f5f4;
       padding-top: 15px;
       max-height: 300px;
       overflow-y: auto;
@@ -1112,32 +1123,20 @@ const batchPublish = async () => {
         display: flex;
         align-items: center;
         padding: 8px 0;
-        color: #606266;
+        color: $text-regular;
 
-        .el-icon {
-          margin-right: 8px;
-        }
+        .el-icon { margin-right: 8px; }
 
         .label {
           margin-right: 10px;
           font-weight: 500;
         }
 
-        .message {
-          color: #909399;
-        }
+        .message { color: $text-secondary; }
 
-        &.success {
-          color: #67C23A;
-        }
-
-        &.error {
-          color: #F56C6C;
-        }
-
-        &.cancelled {
-          color: #909399;
-        }
+        &.success { color: $success-color; }
+        &.error { color: $danger-color; }
+        &.cancelled { color: $text-secondary; }
       }
     }
   }
@@ -1145,30 +1144,40 @@ const batchPublish = async () => {
   .dialog-footer {
     text-align: right;
   }
-  
+
   // 内容区域
   .publish-content {
     flex: 1;
-    background-color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    
+    background-color: $bg-color;
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-base;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: $card-accent-gradient;
+    }
+
     .tab-content-wrapper {
       display: flex;
       justify-content: center;
-      
+
       .tab-content {
         width: 100%;
         max-width: 800px;
-        
+
         h3 {
           font-size: 16px;
-          font-weight: 500;
+          font-weight: 600;
           color: $text-primary;
           margin: 0 0 10px 0;
         }
-        
+
         .upload-section,
         .account-section,
         .platform-section,
@@ -1185,55 +1194,45 @@ const batchPublish = async () => {
             margin-bottom: 5px;
           }
         }
-        
+
         .video-upload {
           width: 100%;
-          
+
           :deep(.el-upload-dragger) {
             width: 100%;
             height: 180px;
           }
         }
-        
-        .account-input {
-          max-width: 400px;
-        }
-        
+
+        .account-input { max-width: 400px; }
+
         .platform-buttons {
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
-          
-          .platform-btn {
-            min-width: 80px;
-          }
+
+          .platform-btn { min-width: 80px; }
         }
-        
-        .title-input {
-          max-width: 600px;
-        }
-        
+
+        .title-input { max-width: 600px; }
+
         .topic-display {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          
+
           .selected-topics {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             min-height: 32px;
-            
-            .topic-tag {
-              font-size: 14px;
-            }
+
+            .topic-tag { font-size: 14px; }
           }
-          
-          .select-topic-btn {
-            align-self: flex-start;
-          }
+
+          .select-topic-btn { align-self: flex-start; }
         }
-        
+
         .schedule-controls {
           display: flex;
           flex-direction: column;
@@ -1241,60 +1240,41 @@ const batchPublish = async () => {
 
           .schedule-settings {
             margin-top: 15px;
-            padding: 15px;
-            background-color: #f5f7fa;
-            border-radius: 4px;
+            padding: 16px;
+            background-color: #f5f5f4;
+            border-radius: $border-radius-sm;
 
             .schedule-item {
               display: flex;
               align-items: center;
               margin-bottom: 15px;
 
-              &:last-child {
-                margin-bottom: 0;
-              }
+              &:last-child { margin-bottom: 0; }
 
-              .label {
-                min-width: 120px;
-                margin-right: 10px;
-              }
-
-              .el-time-select {
-                margin-right: 10px;
-              }
-
-              .el-button {
-                margin-left: 10px;
-              }
+              .label { min-width: 120px; margin-right: 10px; }
+              .el-time-select { margin-right: 10px; }
+              .el-button { margin-left: 10px; }
             }
           }
         }
-        
+
         .action-buttons {
           display: flex;
           justify-content: flex-end;
           gap: 10px;
           margin-top: 30px;
           padding-top: 20px;
-          border-top: 1px solid #ebeef5;
+          border-top: 1px solid #f5f5f4;
         }
 
         .draft-section {
           margin: 20px 0;
-
-          .draft-checkbox {
-            display: block;
-            margin: 10px 0;
-          }
+          .draft-checkbox { display: block; margin: 10px 0; }
         }
 
         .original-section {
           margin: 10px 0 20px;
-
-          .original-checkbox {
-            display: block;
-            margin: 10px 0;
-          }
+          .original-checkbox { display: block; margin: 10px 0; }
         }
       }
     }
@@ -1303,26 +1283,26 @@ const batchPublish = async () => {
   // 已上传文件列表样式
   .uploaded-files {
     margin-top: 20px;
-    
+
     h4 {
       font-size: 16px;
-      font-weight: 500;
+      font-weight: 600;
       margin-bottom: 12px;
-      color: #303133;
+      color: $text-primary;
     }
-    
+
     .file-list {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      
+
       .file-item {
         display: flex;
         align-items: center;
-        padding: 10px 15px;
-        background-color: #f5f7fa;
-        border-radius: 4px;
-        
+        padding: 10px 16px;
+        background-color: #f5f5f4;
+        border-radius: $border-radius-sm;
+
         .el-link {
           margin-right: 10px;
           max-width: 300px;
@@ -1330,16 +1310,16 @@ const batchPublish = async () => {
           text-overflow: ellipsis;
           white-space: nowrap;
         }
-        
+
         .file-size {
-          color: #909399;
+          color: $text-secondary;
           font-size: 13px;
           margin-right: auto;
         }
       }
     }
   }
-  
+
   // 添加话题弹窗样式
   .topic-dialog {
     .topic-dialog-content {
@@ -1347,29 +1327,27 @@ const batchPublish = async () => {
         display: flex;
         gap: 12px;
         margin-bottom: 24px;
-        
-        .custom-input {
-          flex: 1;
-        }
+
+        .custom-input { flex: 1; }
       }
-      
+
       .recommended-topics {
         h4 {
           margin: 0 0 16px 0;
           font-size: 16px;
-          font-weight: 500;
-          color: #303133;
+          font-weight: 600;
+          color: $text-primary;
         }
-        
+
         .topic-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
           gap: 12px;
-          
+
           .topic-btn {
             height: 36px;
             font-size: 14px;
-            border-radius: 6px;
+            border-radius: $border-radius-sm;
             min-width: 100px;
             padding: 0 12px;
             white-space: nowrap;
@@ -1377,17 +1355,17 @@ const batchPublish = async () => {
             display: flex;
             align-items: center;
             justify-content: center;
-            
+
             &.el-button--primary {
-              background-color: #409eff;
-              border-color: #409eff;
+              background: $primary-gradient !important;
+              border-color: transparent !important;
               color: white;
             }
           }
         }
       }
     }
-    
+
     .dialog-footer {
       display: flex;
       justify-content: flex-end;

@@ -1,26 +1,42 @@
-// 颜色变量
-$primary-color: #409eff;
-$success-color: #67c23a;
-$warning-color: #e6a23c;
-$danger-color: #f56c6c;
-$info-color: #909399;
+// ============================================
+// 渐变活力风 - 色彩系统
+// ============================================
+
+// 主色渐变 (橙红)
+$primary-color: #f97316;
+$primary-gradient: linear-gradient(135deg, #f97316, #ef4444);
+
+// 辅助色
+$accent-color: #6366f1;
+$accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+
+// 语义色
+$success-color: #10b981;
+$warning-color: #f59e0b;
+$danger-color: #ef4444;
+$info-color: #6366f1;
 
 // 文字颜色
-$text-primary: #303133;
-$text-regular: #606266;
-$text-secondary: #909399;
-$text-placeholder: #c0c4cc;
+$text-primary: #1e293b;
+$text-regular: #334155;
+$text-secondary: #78716c;
+$text-placeholder: #a1a1aa;
 
 // 边框颜色
-$border-base: #dcdfe6;
-$border-light: #e4e7ed;
-$border-lighter: #ebeef5;
-$border-extra-light: #f2f6fc;
+$border-base: #e7e5e4;
+$border-light: #f5f5f4;
+$border-lighter: #fafaf9;
 
 // 背景颜色
 $bg-color: #ffffff;
-$bg-color-page: #f2f3f5;
+$bg-color-page: #fafaf9;
 $bg-color-overlay: #ffffff;
+
+// 侧边栏渐变
+$sidebar-gradient: linear-gradient(180deg, #0f172a, #1e1b4b);
+
+// 卡片顶部渐变条
+$card-accent-gradient: linear-gradient(90deg, #f97316, #6366f1);
 
 // 字体大小
 $font-size-extra-large: 20px;
@@ -38,15 +54,17 @@ $spacing-lg: 24px;
 $spacing-xl: 32px;
 
 // 圆角
-$border-radius-base: 4px;
-$border-radius-small: 2px;
-$border-radius-round: 20px;
-$border-radius-circle: 50%;
+$border-radius-sm: 8px;
+$border-radius-base: 12px;
+$border-radius-lg: 16px;
+$border-radius-xl: 20px;
+$border-radius-round: 9999px;
 
 // 阴影
-$box-shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
-$box-shadow-dark: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.12);
-$box-shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+$shadow-base: 0 4px 12px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
 
 // 层级
 $z-index-normal: 1;

@@ -34,7 +34,8 @@ description: 当 agent 需要通过已安装的 `sau` CLI 完成携程登录、c
 关键经验：
 - **每次发布前必须清空编辑器**
 - 编辑器是 Draft.js，不是 ProseMirror
-- 使用 `page.keyboard.type()` 逐字输入（Draft.js 不接受 execCommand）
+- 标题使用 `page.keyboard.type()` 逐字输入（Draft.js 不接受 execCommand）
+- 描述正文使用 `page.keyboard.insert_text()` 一次性输入（比逐字快几十倍）
 - **必须填写地点**（`--location` 参数），否则发布被阻止
 - 图片通过 ant-upload 组件上传，支持 multiple
 - 发布按钮文字是"发 布"（中间有空格）

@@ -14,6 +14,7 @@ from uploader.baijiahao_uploader.main import cookie_auth as baijiahao_cookie_aut
 from uploader.smzdm_uploader.main import cookie_auth as smzdm_cookie_auth
 from uploader.toutiao_uploader.main import cookie_auth as toutiao_cookie_auth
 from uploader.ctrip_uploader.main import cookie_auth as ctrip_cookie_auth
+from uploader.sohu_uploader.main import cookie_auth as sohu_cookie_auth
 
 
 async def cookie_auth_douyin(account_file):
@@ -133,6 +134,9 @@ async def check_cookie(type, file_path):
         # 携程
         case 8:
             return await ctrip_cookie_auth(str(cookie_path))
+        # 搜狐号
+        case 9:
+            return await sohu_cookie_auth(str(cookie_path))
         case _:
             return False
 

@@ -168,6 +168,14 @@ sau ctrip check --account <account_name>
 sau ctrip upload-article --account <account_name> --title "文章标题" --content "正文内容" --images img1.jpg img2.jpg --location "杭州" --headed
 ```
 
+### 15. 搜狐号主线示例
+
+```bash
+sau sohu login --account <account_name> --headed
+sau sohu check --account <account_name>
+sau sohu upload-article --account <account_name> --title "文章标题" --content "正文内容" --images img1.jpg img2.jpg --headed
+```
+
 补充说明：
 
 - `creator` 之类的名字只是示例值，真正传的是用户自定义的 `account_name`

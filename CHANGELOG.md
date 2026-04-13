@@ -2,6 +2,24 @@
 
 All notable changes to `social-auto-upload` will be documented in this file.
 
+## [0.2.3] - 2026-04-13
+
+### Added
+
+- **搜狐号图文文章发布** — `sau sohu upload-article` 命令，支持标题、正文、多图片上传
+- **搜狐号登录与 cookie 校验** — `sau sohu login` / `sau sohu check` 命令（mp.sohu.com 后台扫码登录）
+- `uploader/sohu_uploader/__init__.py` — Cookie 目录初始化
+- `uploader/sohu_uploader/main.py` — 登录流程（`sohu_cookie_gen` + `cookie_auth` + `sohu_setup`）
+- `uploader/sohu_uploader/article.py` — `EditorPage` + `SohuArticle` 类，contenteditable 编辑器交互逻辑
+- `utils/log.py` — 添加 `sohu_logger`
+- 平台 ID 9 映射到搜狐号（`sau_cli.py`、`myUtils/postArticle.py`、`myUtils/auth.py`、`sau_backend.py`）
+
+### Changed
+
+- 前端系统名称支持 9 平台（新增搜狐号）
+- `PLATFORM_DISPATCH` 和 `PLATFORM_NAMES` 新增 `{9: 'sohu'}`
+- `ARTICLE_CLI_PLATFORMS` 新增 `{9: 'sohu'}`
+
 ## [0.2.2] - 2026-04-13
 
 ### Fixed

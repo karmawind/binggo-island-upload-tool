@@ -52,6 +52,10 @@ from uploader.ctrip_uploader.main import (
     cookie_auth as ctrip_cookie_auth,
     ctrip_setup,
 )
+from uploader.sohu_uploader.main import (
+    cookie_auth as sohu_cookie_auth,
+    sohu_setup,
+)
 
 SCHEDULE_FORMAT = "%Y-%m-%d %H:%M"
 
@@ -181,6 +185,17 @@ class CtripArticleUploadRequest:
     image_files: list[Path]
     tags: list[str]
     location: str = ""
+    debug: bool = True
+    headless: bool = True
+
+
+@dataclass(slots=True)
+class SohuArticleUploadRequest:
+    account_name: str
+    title: str
+    content: str
+    image_files: list[Path]
+    tags: list[str]
     debug: bool = True
     headless: bool = True
 
@@ -409,7 +424,20 @@ async def check_ctrip_account(account_name: str) -> bool:
     return await ctrip_cookie_auth(str(account_file))
 
 
-async def upload_video(request: DouyinVideoUploadRequest) -> Path:
+async def login_sohu_account(account_name: str, headless: bool = False) -> dict:
+    account_file = resolve_account_file("sohu", account_name)
+    try:
+        await sohu_setup(str(account_file), handle=True)
+        return {"success": True, "account_file": str(account_file)}
+    except Exception as e:
+        return {"success": False, "message": str(e), "account_file": str(account_file)}
+
+
+async def check_sohu_account(account_name: str) -> bool:
+    account_file = resolve_account_file("sohu", account_name)
+    if not account_file.exists():
+        return False
+    return await sohu_cookie_auth(str(account_file))
     account_file = resolve_account_file("douyin", request.account_name)
     is_ready = await douyin_setup(str(account_file), handle=False)
     if not is_ready:
@@ -787,6 +815,24 @@ def build_parser() -> argparse.ArgumentParser:
     ctrip_upload_article_parser.add_argument("--location", default="", help="Location name (required by Ctrip)")
     add_runtime_flags(ctrip_upload_article_parser)
 
+    # ── Sohu ──
+    sohu_parser = platform_parsers.add_parser("sohu", help="Sohu operations")
+    sohu_actions = sohu_parser.add_subparsers(dest="action", required=True)
+
+    for action_name in ("login", "check"):
+        action_parser = sohu_actions.add_parser(action_name, help=f"Sohu {action_name}")
+        action_parser.add_argument("--account", required=True, help="Sohu user-defined account_name")
+        if action_name == "login":
+            add_runtime_flags(action_parser)
+
+    sohu_upload_article_parser = sohu_actions.add_parser("upload-article", help="Upload one article to Sohu")
+    sohu_upload_article_parser.add_argument("--account", required=True, help="Sohu user-defined account_name")
+    sohu_upload_article_parser.add_argument("--title", required=True, help="Article title")
+    sohu_upload_article_parser.add_argument("--content", default="", help="Article content")
+    sohu_upload_article_parser.add_argument("--images", nargs="+", type=existing_file_path, default=[], help="Image file paths")
+    sohu_upload_article_parser.add_argument("--tags", default="", help="Comma-separated tags, such as tag1,tag2")
+    add_runtime_flags(sohu_upload_article_parser)
+
     return parser
 
 
@@ -1130,6 +1176,54 @@ async def dispatch(args: argparse.Namespace) -> int:
             return 0
 
         raise RuntimeError(f"Unsupported Ctrip action: {args.action}")
+
+    if args.platform == "sohu":
+        if args.action == "login":
+            result = await login_sohu_account(args.account, headless=args.headless)
+            if not result["success"]:
+                raise RuntimeError(result["message"])
+            print(f"Sohu login flow completed: {result['account_file']}")
+            return 0
+
+        if args.action == "check":
+            is_valid = await check_sohu_account(args.account)
+            print("valid" if is_valid else "invalid")
+            return 0 if is_valid else 1
+
+        if args.action == "upload-article":
+            from uploader.sohu_uploader.article import SohuArticle
+
+            request = SohuArticleUploadRequest(
+                account_name=args.account,
+                title=args.title,
+                content=args.content,
+                image_files=parse_image_files(args.images) if args.images else [],
+                tags=parse_tags(args.tags),
+                debug=args.debug,
+                headless=args.headless,
+            )
+            account_file = resolve_account_file("sohu", request.account_name)
+            is_ready = await sohu_setup(str(account_file), handle=False)
+            if not is_ready:
+                raise RuntimeError(
+                    f"Sohu cookie is missing or expired: {account_file}. Run `sau sohu login --account {request.account_name}` first."
+                )
+            app = SohuArticle(
+                title=request.title,
+                content=request.content,
+                image_paths=[str(p) for p in request.image_files],
+                tags=request.tags,
+                account_file=str(account_file),
+                headless=request.headless,
+                debug=request.debug,
+            )
+            success = await app.main()
+            if not success:
+                raise RuntimeError(f"Sohu article publish failed for: {request.title}")
+            print(f"Sohu article upload submitted: {request.title}")
+            return 0
+
+        raise RuntimeError(f"Unsupported Sohu action: {args.action}")
 
     raise RuntimeError(f"Unsupported platform: {args.platform}")
 

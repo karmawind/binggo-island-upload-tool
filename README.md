@@ -1,6 +1,6 @@
 # 灵感岛推文分发器
 
-> 一键将图文/视频内容自动发布到百家号、什么值得买、头条号、携程、抖音、B站、小红书、快手等主流平台。
+> 一键将图文/视频内容自动发布到百家号、什么值得买、头条号、携程、搜狐号、抖音、B站、小红书、快手等主流平台。
 > 支持 CLI 命令行、Web 可视化界面、AI Agent 三种使用方式。
 
 `灵感岛推文分发器` 是一个多平台社交媒体自动化分发工具。你可以用一条命令、或一个网页界面，将图文文章同时发布到多个平台，也可以批量排期定时自动发送。
@@ -22,13 +22,13 @@
 
 | 能力 | 说明 |
 | --- | --- |
-| 多平台一键分发 | 一篇帖子同时发布到百家号、头条号、什么值得买、携程等多个平台 |
+| 多平台一键分发 | 一篇帖子同时发布到百家号、头条号、什么值得买、携程、搜狐号等多个平台 |
 | 批量排期定时发布 | 准备多篇内容，设定起始时间和间隔，自动按时逐篇发布 |
 | CSV 批量导入 | 通过 CSV 文件批量创建帖子内容 |
 | Web 可视化管理 | 浏览器中管理账号、编辑帖子、查看发布进度 |
 | CLI 命令行 | 终端中一行命令完成登录、发布、校验 |
 | AI Agent 集成 | 配合 Claude Code / Codex / OpenClaw 等 AI 工具自动执行 |
-| 8 平台统一管理 | 视频平台（抖音、B站、小红书、快手、视频号）+ 图文平台（百家号、什么值得买、头条号、携程） |
+| 8 平台统一管理 | 视频平台（抖音、B站、小红书、快手、视频号）+ 图文平台（百家号、什么值得买、头条号、携程、搜狐号） |
 
 ## 新手引导（初次运行必读）
 
@@ -78,6 +78,7 @@ sau baijiahao login --account 我的百家号 --headed
 sau smzdm login --account 我的值得买 --headed
 sau toutiao login --account 我的头条号 --headed
 sau ctrip login --account 我的携程 --headed
+sau sohu login --account 我的搜狐号 --headed
 
 # 视频平台同理
 sau douyin login --account 我的抖音
@@ -191,6 +192,11 @@ sau toutiao upload-article --account <账号名> --title "标题" --content "正
 sau ctrip login --account <账号名> --headed
 sau ctrip check --account <账号名>
 sau ctrip upload-article --account <账号名> --title "标题" --content "正文" --images 1.jpg 2.jpg --location "杭州" --headed
+
+# 搜狐号
+sau sohu login --account <账号名> --headed
+sau sohu check --account <账号名>
+sau sohu upload-article --account <账号名> --title "标题" --content "正文" --images 1.jpg 2.jpg --headed
 ```
 
 ### 视频平台命令
@@ -265,6 +271,7 @@ sau kuaishou upload-note --account <账号名> --images 1.png 2.png --title "图
 | 什么值得买 | [skills/smzdm-upload/SKILL.md](./skills/smzdm-upload/SKILL.md) |
 | 头条号 | [skills/toutiao-upload/SKILL.md](./skills/toutiao-upload/SKILL.md) |
 | 携程 | [skills/ctrip-upload/SKILL.md](./skills/ctrip-upload/SKILL.md) |
+| 搜狐号 | [skills/sohu-upload/SKILL.md](./skills/sohu-upload/SKILL.md) |
 
 > Agent 详细引导：[Agent Bootstrap Prompt](./docs/agent-bootstrap.md)
 
@@ -281,6 +288,7 @@ sau kuaishou upload-note --account <账号名> --images 1.png 2.png --title "图
 | 什么值得买 | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | 头条号 | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | 携程 | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ |
+| 搜狐号 | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | TikTok | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
 
 ### 编辑器类型说明
@@ -291,6 +299,7 @@ sau kuaishou upload-note --account <账号名> --images 1.png 2.png --title "图
 | 什么值得买 | ProseMirror | `execCommand('insertHTML')` |
 | 头条号 | ProseMirror | `execCommand('insertHTML')` |
 | 携程 | Draft.js | `keyboard.insert_text()`（正文）+ `keyboard.type()`（标题） |
+| 搜狐号 | contenteditable | `execCommand('insertHTML')` |
 
 ## 详细文档
 

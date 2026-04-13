@@ -12,6 +12,7 @@ from uploader.baijiahao_uploader.article import BaiJiaHaoArticle
 from uploader.smzdm_uploader.article import SmzdmArticle
 from uploader.toutiao_uploader.article import ToutiaoArticle
 from uploader.ctrip_uploader.article import CtripArticle
+from uploader.sohu_uploader.article import SohuArticle
 
 logger = logging.getLogger(__name__)
 
@@ -132,15 +133,42 @@ def post_article_ctrip(title, content, image_paths, tags, account_files,
         logger.info(f"携程发布结果: {success}")
 
 
+def post_article_sohu(title, content, image_paths, tags, account_files,
+                      callback=None):
+    """发布搜狐号图文文章。"""
+    cookie_paths = [str(Path(BASE_DIR / "cookiesFile" / f)) for f in account_files]
+    img_paths = [str(Path(BASE_DIR / "imageFile" / img)) for img in image_paths]
+
+    for cookie_path in cookie_paths:
+        logger.info(f"搜狐号发布: title={title}, account={cookie_path}")
+
+        async def _do():
+            app = SohuArticle(
+                title=title,
+                content=content,
+                image_paths=img_paths,
+                tags=tags,
+                account_file=cookie_path,
+                headless=False,
+            )
+            return await app.main()
+
+        success = _run_in_thread(_do())
+        if callback:
+            callback('sohu', cookie_path, success)
+        logger.info(f"搜狐号发布结果: {success}")
+
+
 # 平台类型 → 发布函数映射
 PLATFORM_DISPATCH = {
     5: post_article_baijiahao,
     6: post_article_smzdm,
     7: post_article_toutiao,
     8: post_article_ctrip,
+    9: post_article_sohu,
 }
 
-PLATFORM_NAMES = {5: 'baijiahao', 6: 'smzdm', 7: 'toutiao', 8: 'ctrip'}
+PLATFORM_NAMES = {5: 'baijiahao', 6: 'smzdm', 7: 'toutiao', 8: 'ctrip', 9: 'sohu'}
 
 
 def dispatch_multi_platform(title, content, image_paths, tags,

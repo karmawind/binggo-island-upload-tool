@@ -1014,7 +1014,7 @@ def download_cookie():
 # ==================== 图文平台 SSE 登录（调用 CLI） ====================
 
 # 图文平台 CLI 名称映射
-ARTICLE_CLI_PLATFORMS = {5: 'baijiahao', 6: 'smzdm', 7: 'toutiao', 8: 'ctrip'}
+ARTICLE_CLI_PLATFORMS = {5: 'baijiahao', 6: 'smzdm', 7: 'toutiao', 8: 'ctrip', 9: 'sohu'}
 
 @app.route('/loginArticleAccount')
 def login_article_account():

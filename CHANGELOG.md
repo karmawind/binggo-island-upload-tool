@@ -21,6 +21,20 @@ All notable changes to `social-auto-upload` will be documented in this file.
 - `CLAUDE.md` 搜狐号 SOP 从"参考项目"更新为实际验证的完整 SOP
 - `skills/sohu-upload/` 全部文档同步更新
 
+### 踩过的坑
+
+1. **SPA 路由跳转不渲染 DOM** — 用 `history.pushState` + `popstate` 事件跳转到编辑器，页面 URL 变了但 Vue Router 没有实际渲染编辑器组件。标题输入框 `input[placeholder*='标题']` 在 DOM 中不存在，导致 6 次尝试全部 `Locator.click: Timeout`。**教训：搜狐后台是 SPA，不要用 JS 路由跳转，直接 `goto(editor_url)` 全页导航。**
+
+2. **编辑器不是 contenteditable** — 参考项目文档说编辑器是 contenteditable，实际是 Quill.js（`.ql-editor`）。Quill.js 有自己的 DOM 管理和状态同步机制，直接操作 `[contenteditable='true']` 可能写入成功但 Quill 内部状态不认。**教训：先检查编辑器实际类型（查看 DOM 中是否有 `.ql-editor`、`.ql-toolbar` 等 Quill 特征类名）。**
+
+3. **发布按钮不是 `<button>`** — 搜狐号发布按钮是 `<li class="positive-button publish-report-btn">`，用 `button:has-text('发布')` 永远匹配不到。**教训：不要假设交互元素一定是 `<button>`，用 DevTools 检查实际标签。**
+
+4. **发布有两步确认弹窗** — 点击"发布"后弹出"确认发布文章么？"对话框，需要再点"确定"才真正提交。之前代码没有处理这个弹窗，导致发布流程不完整。**教训：搜狐号发布不是一步到位，需要处理确认弹窗。**
+
+5. **封面图自动选取** — 之前以为需要手动上传封面图，实际搜狐号会自动从正文图片中选取封面。封面区域出现 `.pic-cover` 和"编辑封面"文字表示已自动设置。**教训：先观察平台自动行为，不要过度实现。**
+
+6. **MCP 直接操作 vs patchright CDP** — patchright 通过 CDP 连接本地 Chrome 时，SPA 页面的 DOM 操作可靠性不如直接用 Chrome DevTools MCP。MCP 工具（`take_snapshot`、`evaluate_script`、`upload_file`）可以实时查看 DOM 状态，调试效率远高于 patchright 的 try/except 循环。**教训：新平台开发时，先用 Chrome DevTools MCP 探索和验证流程，确认后再回写到 patchright 代码。**
+
 ## [0.2.3] - 2026-04-13
 
 ### Added

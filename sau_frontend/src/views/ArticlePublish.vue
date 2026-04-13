@@ -52,9 +52,15 @@
       <!-- 图片上传 -->
       <div class="section-card">
         <h3>上传图片 <span class="hint">（最多20张，推荐宽高比3:4~2:1）</span></h3>
-        <el-upload :action="uploadUrl" list-type="picture-card" :file-list="fileList" :on-success="handleUploadSuccess" :on-remove="handleUploadRemove" :before-upload="beforeUpload" accept="image/*" :limit="20" name="file">
-          <el-icon><Plus /></el-icon>
-        </el-upload>
+        <div class="image-upload-toolbar">
+          <el-upload :action="uploadUrl" list-type="picture-card" :file-list="fileList" :on-success="handleUploadSuccess" :on-remove="handleUploadRemove" :before-upload="beforeUpload" accept="image/*" :limit="20" name="file">
+            <el-icon><Plus /></el-icon>
+          </el-upload>
+          <el-button type="primary" plain @click="openMaterialDialog" class="material-btn">
+            <el-icon><FolderOpened /></el-icon>
+            从素材库选择
+          </el-button>
+        </div>
       </div>
 
       <!-- 标签 -->
@@ -113,16 +119,46 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 素材库图片选择对话框 -->
+    <el-dialog v-model="materialDialogVisible" title="从素材库选择图片" width="700px">
+      <div v-if="materialLoading" style="text-align: center; padding: 30px;">
+        <el-icon class="is-loading" style="font-size: 24px;"><Loading /></el-icon>
+        <p style="margin-top: 10px; color: #909399;">加载素材中...</p>
+      </div>
+      <div v-else-if="materialImages.length === 0" style="text-align: center; padding: 30px;">
+        <el-empty description="素材库中没有图片，请先上传" />
+      </div>
+      <el-checkbox-group v-else v-model="selectedMaterialIds">
+        <div class="material-grid">
+          <div v-for="mat in materialImages" :key="mat.id" class="material-grid-item">
+            <el-checkbox :value="mat.id">
+              <div class="material-card">
+                <img :src="getMaterialPreviewUrl(mat.file_path)" class="material-thumb" />
+                <div class="material-name">{{ mat.filename }}</div>
+              </div>
+            </el-checkbox>
+          </div>
+        </div>
+      </el-checkbox-group>
+      <template #footer>
+        <el-button @click="materialDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmMaterialSelection" :loading="materialCopying">
+          确认选择 ({{ selectedMaterialIds.length }})
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, FolderOpened, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { articleApi } from '@/api/article'
 import { accountApi } from '@/api/account'
+import { materialApi } from '@/api/material'
 import { useArticleDraftStore } from '@/stores/articleDraft'
 
 const platformNames = { 5: '百家号', 6: '什么值得买', 7: '头条号', 8: '携程' }
@@ -162,6 +198,75 @@ const progressResults = ref([])
 const dialogAccounts = computed(() => {
   return allAccounts.value.filter(acc => acc.type === currentDialogPlatform.value)
 })
+
+// 素材库图片选择相关
+const materialDialogVisible = ref(false)
+const materialImages = ref([])
+const selectedMaterialIds = ref([])
+const materialLoading = ref(false)
+const materialCopying = ref(false)
+
+const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+const isImageFile = (filename) => imageExtensions.some(ext => filename.toLowerCase().endsWith(ext))
+
+const getMaterialPreviewUrl = (filePath) => {
+  const filename = filePath.split('/').pop()
+  return materialApi.getMaterialPreviewUrl(filename)
+}
+
+const openMaterialDialog = async () => {
+  materialDialogVisible.value = true
+  materialLoading.value = true
+  selectedMaterialIds.value = []
+  try {
+    const res = await materialApi.getAllMaterials()
+    if (res.code === 200 && res.data) {
+      materialImages.value = res.data.filter(m => isImageFile(m.filename))
+    }
+  } catch (error) {
+    console.error('获取素材失败:', error)
+    ElMessage.error('获取素材列表失败')
+  } finally {
+    materialLoading.value = false
+  }
+}
+
+const confirmMaterialSelection = async () => {
+  if (selectedMaterialIds.value.length === 0) {
+    ElMessage.warning('请选择至少一张图片')
+    return
+  }
+
+  materialCopying.value = true
+  let successCount = 0
+  for (const matId of selectedMaterialIds.value) {
+    const mat = materialImages.value.find(m => m.id === matId)
+    if (!mat) continue
+    try {
+      const res = await articleApi.copyMaterialToImage(mat.file_path)
+      if (res.code === 200) {
+        form.imagePaths.push(res.data.filepath)
+        // 同步到 fileList 显示
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409'
+        fileList.value.push({
+          name: mat.filename,
+          url: `${baseUrl}/getFile?filename=${mat.file_path}`,
+          uploadedPath: res.data.filepath
+        })
+        successCount++
+      } else {
+        ElMessage.error(`${mat.filename} 复制失败: ${res.msg}`)
+      }
+    } catch (error) {
+      ElMessage.error(`${mat.filename} 复制失败`)
+    }
+  }
+  materialCopying.value = false
+  materialDialogVisible.value = false
+  if (successCount > 0) {
+    ElMessage.success(`已添加 ${successCount} 张图片`)
+  }
+}
 
 // 获取所有账号
 const fetchAccounts = async () => {
@@ -399,6 +504,54 @@ const pollTaskStatus = (taskId) => {
     .progress-detail {
       margin-top: 16px;
       .progress-item { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    }
+  }
+
+  .image-upload-toolbar {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+
+    .material-btn {
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+  }
+
+  .material-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 4px;
+
+    .material-grid-item {
+      .material-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        .material-thumb {
+          width: 100%;
+          height: 100px;
+          object-fit: cover;
+          border-radius: $border-radius-sm;
+          border: 1px solid $border-base;
+          margin-bottom: 6px;
+        }
+
+        .material-name {
+          font-size: 12px;
+          color: $text-secondary;
+          text-align: center;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 120px;
+        }
+      }
     }
   }
 }

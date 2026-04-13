@@ -602,6 +602,57 @@ def upload_image():
         return jsonify({"code": 500, "msg": str(e), "data": None}), 500
 
 
+@app.route('/copyMaterialToImage', methods=['POST'])
+def copy_material_to_image():
+    """将素材库中的图片复制到图文图片目录，供图文发布使用。"""
+    data = request.get_json() or {}
+    file_path = data.get('filePath')  # 素材的 file_path，如 UUID_name.jpg
+
+    if not file_path:
+        return jsonify({"code": 400, "msg": "filePath is required", "data": None}), 400
+
+    # 安全检查：防止路径穿越
+    if '..' in file_path or file_path.startswith('/'):
+        return jsonify({"code": 400, "msg": "Invalid filePath", "data": None}), 400
+
+    # 只允许图片文件
+    image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
+    ext = Path(file_path).suffix.lower()
+    if ext not in image_extensions:
+        return jsonify({"code": 400, "msg": "只支持图片文件", "data": None}), 400
+
+    src = Path(BASE_DIR / "videoFile" / file_path)
+    if not src.exists():
+        return jsonify({"code": 404, "msg": "素材文件不存在", "data": None}), 404
+
+    try:
+        # 目标路径使用新的 UUID，避免文件名冲突
+        new_uuid = uuid.uuid1()
+        original_name = file_path.split('_', 1)[1] if '_' in file_path else file_path
+        new_filename = f"{new_uuid}_{original_name}"
+
+        dst = Path(BASE_DIR / "imageFile" / new_filename)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(str(src), str(dst))
+
+        # 记录到 article_images 表
+        with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'INSERT INTO article_images (filename, filesize, file_path) VALUES (?, ?, ?)',
+                (original_name, round(float(os.path.getsize(dst)) / (1024 * 1024), 2), new_filename)
+            )
+            conn.commit()
+
+        return jsonify({
+            "code": 200,
+            "msg": "复制成功",
+            "data": {"filepath": new_filename}
+        }), 200
+    except Exception as e:
+        return jsonify({"code": 500, "msg": str(e), "data": None}), 500
+
+
 @app.route('/getImages', methods=['GET'])
 def get_images():
     """获取所有已上传的图文图片。"""

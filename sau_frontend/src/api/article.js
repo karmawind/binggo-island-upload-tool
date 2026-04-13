@@ -54,5 +54,10 @@ export const articleApi = {
   // 导入 CSV
   importArticles(formData) {
     return http.upload('/importArticles', formData)
+  },
+
+  // 从素材库复制图片到图文图片目录
+  copyMaterialToImage(filePath) {
+    return http.post('/copyMaterialToImage', { filePath })
   }
 }

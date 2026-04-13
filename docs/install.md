@@ -14,8 +14,8 @@
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/dreammis/social-auto-upload.git
-cd social-auto-upload
+git clone https://github.com/karmawind/binggo-island-upload-tool.git
+cd binggo-island-upload-tool
 ```
 
 ### 2. 创建虚拟环境
@@ -90,6 +90,10 @@ sau douyin --help
 sau kuaishou --help
 sau xiaohongshu --help
 sau bilibili --help
+sau baijiahao --help
+sau smzdm --help
+sau toutiao --help
+sau ctrip --help
 ```
 
 如果命令找不到，优先确认：
@@ -130,6 +134,38 @@ sau xiaohongshu upload-note --account <account_name> --images videos/1.png video
 sau bilibili login --account <account_name>
 sau bilibili check --account <account_name>
 sau bilibili upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tid 249
+```
+
+### 11. 百家号主线示例
+
+```bash
+sau baijiahao login --account <account_name> --headed
+sau baijiahao check --account <account_name>
+sau baijiahao upload-article --account <account_name> --title "文章标题" --content "正文内容" --images img1.jpg img2.jpg --headed
+```
+
+### 12. 什么值得买主线示例
+
+```bash
+sau smzdm login --account <account_name> --headed
+sau smzdm check --account <account_name>
+sau smzdm upload-article --account <account_name> --title "文章标题" --content "正文内容" --images img1.jpg img2.jpg --headed
+```
+
+### 13. 头条号主线示例
+
+```bash
+sau toutiao login --account <account_name> --headed
+sau toutiao check --account <account_name>
+sau toutiao upload-article --account <account_name> --title "文章标题" --content "正文内容" --images img1.jpg img2.jpg --headed
+```
+
+### 14. 携程主线示例
+
+```bash
+sau ctrip login --account <account_name> --headed
+sau ctrip check --account <account_name>
+sau ctrip upload-article --account <account_name> --title "文章标题" --content "正文内容" --images img1.jpg img2.jpg --location "杭州" --headed
 ```
 
 补充说明：
@@ -181,6 +217,10 @@ sau douyin --help
 sau kuaishou --help
 sau xiaohongshu --help
 sau bilibili --help
+sau baijiahao --help
+sau smzdm --help
+sau toutiao --help
+sau ctrip --help
 ```
 
 6. 如果用户的目标是抖音或快手的登录、cookie 校验、视频上传、图文上传，优先走 CLI：
@@ -204,6 +244,22 @@ sau xiaohongshu upload-note
 sau bilibili login
 sau bilibili check
 sau bilibili upload-video
+
+sau baijiahao login
+sau baijiahao check
+sau baijiahao upload-article
+
+sau smzdm login
+sau smzdm check
+sau smzdm upload-article
+
+sau toutiao login
+sau toutiao check
+sau toutiao upload-article
+
+sau ctrip login
+sau ctrip check
+sau ctrip upload-article
 ```
 
 7. 如果用户明确在使用 skill 系统，再引导其阅读：
@@ -216,6 +272,10 @@ sau bilibili upload-video
 - `skills/xiaohongshu-upload/references/cli-contract.md`
 - `skills/bilibili-upload/SKILL.md`
 - `skills/bilibili-upload/references/cli-contract.md`
+- `skills/baijiahao-upload/SKILL.md`
+- `skills/smzdm-upload/SKILL.md`
+- `skills/toutiao-upload/SKILL.md`
+- `skills/ctrip-upload/SKILL.md`
 
 ### 对 agent 的额外说明
 

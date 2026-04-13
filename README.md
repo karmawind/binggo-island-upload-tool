@@ -290,7 +290,7 @@ sau kuaishou upload-note --account <账号名> --images 1.png 2.png --title "图
 | 百家号 | UEditor（iframe） | `execCommand('insertHTML')` |
 | 什么值得买 | ProseMirror | `execCommand('insertHTML')` |
 | 头条号 | ProseMirror | `execCommand('insertHTML')` |
-| 携程 | Draft.js | `keyboard.insert_text()` |
+| 携程 | Draft.js | `keyboard.insert_text()`（正文）+ `keyboard.type()`（标题） |
 
 ## 详细文档
 

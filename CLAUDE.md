@@ -161,7 +161,7 @@ sau ctrip check --account <账号名>
 sau ctrip upload-article --account <账号名> --title <标题> --content "正文" --images 图片1.png 图片2.png --location "地点" [--headed]
 ```
 
-携程图文发布使用 Draft.js 编辑器，标题和描述均为 DraftEditor contenteditable 组件。**必须用 `page.keyboard.type()` 输入文字**，不能用 `execCommand` 或 `fill()`。发布必须指定地点（`--location`），否则验证不通过。推荐使用 `--headed` 模式。最多上传 20 张图片，推荐宽高比 3:4~2:1。不支持定时发布。
+携程图文发布使用 Draft.js 编辑器，标题和描述均为 DraftEditor contenteditable 组件。标题用 `page.keyboard.type()` 输入，正文用 `page.keyboard.insert_text()` 一次性输入，不能用 `execCommand` 或 `fill()`。发布必须指定地点（`--location`），否则验证不通过。推荐使用 `--headed` 模式。最多上传 20 张图片，推荐宽高比 3:4~2:1。不支持定时发布。
 
 **安装内置技能包：**
 
@@ -331,7 +331,7 @@ sau skill install
 ### 描述正文填写
 
 - 描述正文是第二个 `div.public-DraftEditor-content` 组件
-- **同样必须使用 `page.keyboard.type()` 输入**
+- **使用 `page.keyboard.insert_text()` 一次性输入**（比逐字输入快几十倍）
 - 图片上传后可能有多个 DraftEditor 实例，用 JS 动态定位描述编辑器（跳过标题编辑器）
 - 填写前先用 JS `focus()` 定位到描述编辑器
 
@@ -377,6 +377,6 @@ sau skill install
 
 ## 铁律
 
-**每实现一个功能，经我确认后，必须将更新日志和踩过的坑总结到 `C:\Users\laoga\Desktop\fatie_project\social-auto-upload\CHANGELOG.md` 中。**
+**每实现一个功能，经我确认后，必须将更新日志和踩过的坑总结到 `CHANGELOG.md` 中。**
 
 **所有平台的自动化测试必须从空白/干净的编辑器状态开始，绝不延续上一次测试的编辑状态。** 残留的标题、正文、图片、遮罩面板、弹窗等 DOM 元素会导致后续所有操作出现不可预见的情况（按钮被遮挡、内容重复、选择器匹配错误、上传面板异常等）。每次发布/测试前必须有清空编辑器的步骤。

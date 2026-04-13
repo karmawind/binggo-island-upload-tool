@@ -2,6 +2,33 @@
 
 All notable changes to `social-auto-upload` will be documented in this file.
 
+## [0.2.1] - 2026-04-13
+
+### Fixed
+
+- **什么值得买登录检测选择器失效** — 什么值得买首页改版后 `a.nickname`、`a[href*='hai']` 等旧选择器全部失效，`wait_for_selector` 永远等不到登录成功。改为 `a.name-link`、`a[href*='zhiyou.smzdm.com/user']`、`a[href*='user/logout']`
+- **后端 CLI 登录子进程编码崩溃** — subprocess 用 `encoding='utf-8'` 读取 stdout，遇到什么值得买 GBK 中文输出抛 `UnicodeDecodeError`，导致登录成功但后端无法检测。改为 binary 模式读取 + `decode('utf-8', errors='replace')` 容错
+- **后端 CLI 登录子进程卡死** — `for line in proc.stdout` 阻塞读取，CLI 子进程不退出时后端永远卡住。改为独立线程读取 + 180 秒超时 `proc.kill()` 保护
+- **后端 cookie 新鲜度检查 10 秒窗口过窄** — CLI 保存 cookie 后关闭浏览器需要数秒，加上 stdout 管道延迟，经常超过 10 秒导致误判登录失败。改为检查 `exit_code == 0 and cookie_file.exists()`
+- **什么值得买编辑器页面导航无超时** — `smzdm_cookie_gen` 登录后跳转编辑器页面验证时可能卡住。改为 15 秒超时 + try/except 保护
+- **start.bat Windows 兼容性** — 修复 UTF-8 编码导致 CMD 解析乱码（改为纯 ASCII）、LF 换行改为 CRLF、`start` 命令引号嵌套问题
+- **删除冗余 start-win.bat** — 未激活 venv、无环境检查，功能完全被 start.bat 覆盖
+
+### Changed
+
+- `pyproject.toml` version `0.1.0` → `0.2.0`
+- `CLAUDE.md` 铁律路径从 `C:\Users\laoga\...` 绝对路径改为相对路径 `CHANGELOG.md`
+- `CLAUDE.md` 携程 SOP 正文输入方法更新为 `keyboard.insert_text()`
+- `requirements.txt` 修复 UTF-16 编码损坏，移除 `playwright`，添加 `patchright`/`Flask`/`flask-cors`/`opencv-python`
+- `docs/install.md` Git clone URL 统一为当前仓库，补充百家号/什么值得买/头条号/携程 CLI 示例和 skill 引用
+- `新手入门指南.md` 安装命令从 `pip install -r requirements.txt` 改为 `pip install -e .`
+- `project-overview.md` 项目名称、平台数量（10）、携程输入方法同步更新
+- `README.md` 携程编辑器表格同步更新
+
+### Added
+
+- `setup.sh` — Git Bash 一键安装脚本
+
 ## [0.2.0] - 2026-04-12
 
 ### Added

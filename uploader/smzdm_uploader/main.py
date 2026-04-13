@@ -31,21 +31,24 @@ async def smzdm_cookie_gen(account_file, headless: bool = False):
         smzdm_logger.info("已打开什么值得买首页，请在页面上手动登录（或扫码登录）")
         smzdm_logger.info("登录完成后会自动保存 cookie...")
 
-        # 等待用户登录完成：检测用户头像或用户名出现
+        # 等待用户登录完成：检测用户名链接或"退出登录"出现
         try:
             await page.wait_for_selector(
-                "a.nickname, a[href*='hai'], .J_user_info, .user-bar a",
+                "a.name-link, a[href*='zhiyou.smzdm.com/user'], a[href*='user/logout']",
                 timeout=300000,
             )
             smzdm_logger.success("检测到登录成功")
         except Exception:
             smzdm_logger.warning("未检测到登录标识（等待超时），继续尝试保存 cookie...")
 
-        # 验证能否访问发帖页
-        await page.goto(SMZDM_EDITOR_URL)
-        await page.wait_for_timeout(3000)
-        if "login" in page.url.lower() or "passport" in page.url.lower():
-            smzdm_logger.error("登录可能未成功，被重定向到登录页")
+        # 验证能否访问发帖页（加超时保护，避免卡住）
+        try:
+            await page.goto(SMZDM_EDITOR_URL, timeout=15000)
+            await page.wait_for_timeout(2000)
+            if "login" in page.url.lower() or "passport" in page.url.lower():
+                smzdm_logger.error("登录可能未成功，被重定向到登录页")
+        except Exception as e:
+            smzdm_logger.warning(f"访问编辑器页面超时或出错: {e}，继续保存 cookie")
 
         account_path = os.path.dirname(account_file)
         os.makedirs(account_path, exist_ok=True)
@@ -74,9 +77,9 @@ async def cookie_auth(account_file):
                 smzdm_logger.error("cookie 已失效，被重定向到登录页")
                 return False
 
-            # 检测用户标识
+            # 检测用户标识（登录后页面会出现用户名链接和退出登录）
             user_indicator = await page.query_selector_all(
-                "a.nickname, a[href*='hai'], .J_user_info, .user-bar a"
+                "a.name-link, a[href*='zhiyou.smzdm.com/user'], a[href*='user/logout']"
             )
             if not user_indicator:
                 smzdm_logger.error("cookie 已失效，未检测到用户标识")

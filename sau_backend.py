@@ -1066,17 +1066,31 @@ def _run_cli_login(cli_name, account_name, platform_type, status_queue):
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True,
             cwd=str(BASE_DIR),
-            encoding='utf-8',
-            errors='replace'
         )
 
-        # 读取输出并转发
-        for line in proc.stdout:
-            line = line.strip()
-            if line:
-                status_queue.put(f"[CLI] {line}")
+        # 读取输出并转发（用 binary 模式避免 GBK/UTF-8 编码崩溃）
+        import threading
+
+        def _read_stdout():
+            for raw_line in proc.stdout:
+                try:
+                    line = raw_line.decode('utf-8', errors='replace').strip()
+                except Exception:
+                    line = raw_line.decode('gbk', errors='replace').strip()
+                if line:
+                    status_queue.put(f"[CLI] {line}")
+
+        reader_thread = threading.Thread(target=_read_stdout, daemon=True)
+        reader_thread.start()
+
+        # 等待进程结束，最多 180 秒（3 分钟足够完成登录）
+        try:
+            proc.wait(timeout=180)
+        except subprocess.TimeoutExpired:
+            status_queue.put("[WARN] CLI login process timed out, killing...")
+            proc.kill()
+            proc.wait(timeout=5)
 
         proc.wait()
         exit_code = proc.returncode
@@ -1084,15 +1098,11 @@ def _run_cli_login(cli_name, account_name, platform_type, status_queue):
         # 检查 cookie 文件是否生成
         cookie_src = Path(BASE_DIR) / "cookies" / f"{cli_name}_{account_name}.json"
 
-        # 检查文件是否是本次新生成的（修改时间在最近 10 秒内）
-        cookie_is_fresh = False
-        if cookie_src.exists():
-            import time as _time
-            mtime = cookie_src.stat().st_mtime
-            if _time.time() - mtime < 10:
-                cookie_is_fresh = True
+        # 进程正常退出且 cookie 文件存在即视为登录成功
+        # （不再用 10 秒新鲜度检查，因为关闭浏览器+刷新 stdout 管道可能超过 10 秒）
+        login_success = exit_code == 0 and cookie_src.exists()
 
-        if cookie_is_fresh:
+        if login_success:
             # 检查账号是否已存在（重新认证 vs 新建）
             with sqlite3.connect(Path(BASE_DIR) / "db" / "database.db") as conn:
                 conn.row_factory = sqlite3.Row
@@ -1124,7 +1134,7 @@ def _run_cli_login(cli_name, account_name, platform_type, status_queue):
 
             status_queue.put("200")
         else:
-            status_queue.put(f"[失败] 登录未完成（cookie 文件未生成，退出码={exit_code}）")
+            status_queue.put(f"[失败] 登录未完成（cookie 文件={cookie_src.exists()}, 退出码={exit_code}）")
             status_queue.put("500")
 
     except Exception as e:

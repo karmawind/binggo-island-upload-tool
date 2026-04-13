@@ -2,6 +2,18 @@
 
 All notable changes to `social-auto-upload` will be documented in this file.
 
+## [0.2.2] - 2026-04-13
+
+### Fixed
+
+- **携程图文发布导航慢（1 分钟+）** — `navigate_to_editor()` 先加载 publishHome 再点按钮再跳转编辑器，两次页面加载 + 多处固定 sleep。改为直接 `goto(EDITOR_URL)` + `wait_for_load_state("domcontentloaded")`，跳过发布首页
+- **携程标题/正文输入慢** — `fill_title()` 逐字输入 delay=50ms、调试 JS 遍历所有编辑器、两处 sleep(0.5)、验证 JS；`fill_content()` 调试 `__editor_debug`、两处 sleep。删除所有调试代码和不必要 sleep，标题输入 delay 从 50ms 降到 20ms
+- **携程编辑器等待多余 sleep** — `wait_for_editor_ready()` 末尾 sleep(2) 和 `clear_editor()` 后 sleep(1) 均已删除
+
+### Changed
+
+- 携程图文发布整体响应时间从 1 分钟+ 降至约 10 秒
+
 ## [0.2.1] - 2026-04-13
 
 ### Fixed

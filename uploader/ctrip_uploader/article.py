@@ -37,45 +37,17 @@ class EditorPage:
         self.page = page
 
     async def navigate_to_editor(self):
-        """导航到图文发布页面。"""
+        """导航到图文发布页面。直接打开编辑器 URL，跳过发布首页。"""
         ctrip_logger.info("正在打开图文发布页面...")
-        # 先到发布首页，再点击"发布图文"
-        await self.page.goto(self.PUBLISH_HOME_URL, timeout=60000)
-        await asyncio.sleep(3)
+        await self.page.goto(self.EDITOR_URL, timeout=60000)
+        await self.page.wait_for_load_state("domcontentloaded")
 
-        # 检查是否需要登录
+        # 检查是否被重定向到登录页
         body_text = await self.page.evaluate(
             "() => document.body?.innerText?.substring(0, 500) || ''"
         )
         if "个人登录" in body_text and "发布内容" not in body_text:
             raise CookieExpiredError("Cookie 已失效，页面显示登录")
-
-        # 点击"发布图文"按钮
-        btn = self.page.locator("button.ant-btn-primary:has-text('发布图文')")
-        try:
-            await btn.click(timeout=10000)
-            ctrip_logger.info("已点击'发布图文'")
-        except Exception:
-            ctrip_logger.warning("直接点击失败，尝试 JS 点击...")
-            await self.page.evaluate("""() => {
-                const btns = document.querySelectorAll('button.ant-btn-primary');
-                for (const btn of btns) {
-                    if (btn.innerText?.trim() === '发布图文') {
-                        btn.click();
-                        return true;
-                    }
-                }
-                return false;
-            }""")
-
-        await asyncio.sleep(5)
-
-        # 确认进入了编辑器页面
-        if "publishPictureText" not in self.page.url:
-            # 尝试直接导航
-            ctrip_logger.info("尝试直接导航到编辑器...")
-            await self.page.goto(self.EDITOR_URL, timeout=60000)
-            await asyncio.sleep(5)
 
         ctrip_logger.success("发帖页面已打开")
 
@@ -89,7 +61,6 @@ class EditorPage:
             ctrip_logger.debug("Draft.js 编辑器加载完毕")
         except Exception:
             ctrip_logger.warning("等待编辑器加载超时，继续执行...")
-        await asyncio.sleep(2)
 
     async def clear_editor(self):
         """清空编辑器中的标题和正文，确保从空白状态开始。"""
@@ -125,33 +96,12 @@ class EditorPage:
         """填写笔记标题。标题区域是 Draft.js 编辑器，必须用键盘输入。"""
         ctrip_logger.info(f"填写标题: {title[:50]}")
 
-        # 调试：列出所有 DraftEditor
-        editor_info = await self.page.evaluate("""() => {
-            const editors = document.querySelectorAll('div.public-DraftEditor-content');
-            return Array.from(editors).map((e, i) => ({
-                index: i,
-                text: e.innerText?.substring(0, 50),
-                parentClass: e.parentElement?.className?.substring(0, 80),
-                grandparentClass: e.parentElement?.parentElement?.className?.substring(0, 80),
-            }));
-        }""")
-        ctrip_logger.debug(f"DraftEditor 列表: {editor_info}")
-
         # 点击标题编辑器（第一个 DraftEditor）
         title_editor = self.page.locator("div.public-DraftEditor-content").first
         await title_editor.click(timeout=10000)
-        await asyncio.sleep(0.5)
 
         # Draft.js 是 React 状态管理，必须用键盘输入
-        await self.page.keyboard.type(title[:20], delay=50)
-
-        # 验证标题是否真的填入了
-        await asyncio.sleep(0.5)
-        title_text = await self.page.evaluate("""() => {
-            const editors = document.querySelectorAll('div.public-DraftEditor-content');
-            return editors.length > 0 ? editors[0].innerText?.substring(0, 50) : '';
-        }""")
-        ctrip_logger.info(f"标题验证 - 第一个编辑器内容: '{title_text}'")
+        await self.page.keyboard.type(title[:20], delay=20)
 
         ctrip_logger.success("标题已填写")
 
@@ -162,38 +112,24 @@ class EditorPage:
 
         ctrip_logger.info("开始填写正文...")
 
-        # 找到描述编辑器 — 使用 JS 定位并点击
-        clicked = await self.page.evaluate("""() => {
+        # 找到描述编辑器并用 JS 定位并 focus
+        await self.page.evaluate("""() => {
             const editors = document.querySelectorAll('div.public-DraftEditor-content');
-            // 收集所有编辑器信息
-            window.__editor_debug = Array.from(editors).map((e, i) => ({
-                index: i,
-                text: e.innerText?.substring(0, 30),
-                closestUpload: !!e.closest('.r-d-upload-image-title'),
-                closestEditorBody: !!e.closest('div.editor-body'),
-            }));
             // 跳过第一个（标题），找描述编辑器
             for (let i = 1; i < editors.length; i++) {
                 const editor = editors[i];
-                // 描述编辑器不包含在标题的 .editor-body 内
                 const titleBody = editor.closest('.r-d-upload-image-title') ||
                                   editor.closest('div.editor-body');
                 if (!titleBody) {
                     editor.focus();
-                    return { found: true, index: i };
+                    return;
                 }
             }
             // 如果都没找到，用第二个
             if (editors.length >= 2) {
                 editors[1].focus();
-                return { found: true, index: 1, fallback: true };
             }
-            return { found: false };
         }""")
-        ctrip_logger.info(f"描述编辑器定位结果: {clicked}")
-        editor_debug = await self.page.evaluate("() => window.__editor_debug")
-        ctrip_logger.debug(f"编辑器详情: {editor_debug}")
-        await asyncio.sleep(0.3)
 
         # 准备文本（将换行转为分段）
         paragraphs = content.split("\n")
@@ -201,14 +137,6 @@ class EditorPage:
 
         # 使用 insertText 一次性输入（Draft.js 支持此方式，比逐字输入快得多）
         await self.page.keyboard.insert_text(full_text[:3000])
-
-        # 验证正文是否真的填入了
-        await asyncio.sleep(0.5)
-        content_check = await self.page.evaluate("""() => {
-            const editors = document.querySelectorAll('div.public-DraftEditor-content');
-            return editors.length > 1 ? editors[1].innerText?.substring(0, 50) : 'no second editor';
-        }""")
-        ctrip_logger.info(f"正文验证 - 第二个编辑器内容: '{content_check}'")
 
         ctrip_logger.success("正文已填写")
 
@@ -537,7 +465,6 @@ class CtripArticle:
             await editor.navigate_to_editor()
             await editor.wait_for_editor_ready()
             await editor.clear_editor()
-            await asyncio.sleep(1)
 
             # Step 3: 上传图片（携程要求先上传图片）
             if self.image_paths:

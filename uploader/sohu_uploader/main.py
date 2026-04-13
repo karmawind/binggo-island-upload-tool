@@ -27,7 +27,14 @@ async def sohu_cookie_gen(account_file, headless: bool = False):
     try:
         async with async_playwright() as playwright:
             sohu_logger.info("[登录] 启动浏览器...")
-            launch_args = ["--lang=zh-CN", "--no-sandbox"]
+            launch_args = [
+                "--lang=zh-CN",
+                "--no-sandbox",
+                "--disable-blink-features=AutomationControlled",
+                "--disable-features=AutomationControlled",
+                "--disable-infobars",
+                "--window-size=1920,1080",
+            ]
             if not headless:
                 launch_args.append("--start-maximized")
             browser = await playwright.chromium.launch(
@@ -35,6 +42,23 @@ async def sohu_cookie_gen(account_file, headless: bool = False):
             )
             context = await browser.new_context(locale="zh-CN")
             context = await set_init_script(context)
+            # 额外反检测
+            await context.add_init_script(script="""
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                window.chrome = { runtime: {}, loadTimes: function(){}, csi: function(){} };
+                const originalQuery = window.navigator.permissions.query;
+                window.navigator.permissions.query = (parameters) => (
+                    parameters.name === 'notifications' ?
+                        Promise.resolve({ state: Notification.permission }) :
+                        originalQuery(parameters)
+                );
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5]
+                });
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['zh-CN', 'zh', 'en']
+                });
+            """)
             page = await context.new_page()
 
             sohu_logger.info("[登录] 正在打开搜狐号后台...")

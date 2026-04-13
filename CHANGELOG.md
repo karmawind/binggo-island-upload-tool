@@ -2,6 +2,25 @@
 
 All notable changes to `social-auto-upload` will be documented in this file.
 
+## [0.2.4] - 2026-04-14
+
+### Fixed
+
+- **搜狐号图文发布完整流程验证通过** — 通过 Chrome DevTools MCP 实际发布验证，修复所有已知问题
+- **编辑器类型识别错误** — 编辑器实际为 Quill.js（`.ql-editor`），而非简单 contenteditable；选择器从 `[contenteditable='true']` 修正为 `.ql-editor`
+- **SPA 路由跳转导致标题选择器失效** — `history.pushState` 跳转未正确渲染编辑器 DOM，改为直接 `goto(editor_url)` 导航
+- **发布按钮选择器错误** — 发布按钮是 `<li>` 元素（`li.positive-button.publish-report-btn`），不是 `<button>`
+- **缺少发布确认弹窗处理** — 搜狐号发布有两步确认："确认发布文章么？" → 点"确定"
+- **图片上传流程重写** — 通过工具栏 image 按钮打开上传弹窗，而非直接找 hidden file input
+- **编辑器 URL 更新** — 从旧版 `/api/author/article/new` 更新为 `/mpfe/v4/contentManagement/news/addarticle?contentStatus=1`
+- **标题字数限制修正** — 从 30 字修正为 72 字（placeholder 明确标注"5-72字"）
+- `main.py` 登录流程增加反检测参数和脚本
+
+### Changed
+
+- `CLAUDE.md` 搜狐号 SOP 从"参考项目"更新为实际验证的完整 SOP
+- `skills/sohu-upload/` 全部文档同步更新
+
 ## [0.2.3] - 2026-04-13
 
 ### Added

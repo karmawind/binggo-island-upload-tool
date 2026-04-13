@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
 """搜狐号图文文章发布器。
 
-适配 social-auto-upload 框架，基于 contenteditable 富文本编辑器的 DOM 交互。
+适配 social-auto-upload 框架，基于 Quill.js 富文本编辑器的 DOM 交互。
 
-发布流程：
+发布流程（已通过 Chrome DevTools MCP 验证 2026-04-13）：
 1. 导航到文章编辑页面
 2. 关闭弹窗
 3. 清空编辑器
-4. 填写标题（30 字限制）
-5. 填写正文（contenteditable + execCommand）
-6. 上传图片
-7. 发布
+4. 填写标题（5-72字）
+5. 填写正文（Quill.js + execCommand）
+6. 上传图片（工具栏 image 按钮 → 上传弹窗）
+7. 发布（两步确认：发布按钮 → 确认发布 → 确定）
 8. 验证发布结果
+
+关键发现：
+- 编辑器是 Quill.js（.ql-editor），不是简单 contenteditable
+- 发布按钮是 <li> 元素，不是 <button>
+- 发布有两步确认弹窗："确认发布文章么？" → 点"确定"
+- 封面图自动从正文图片选取，无需手动设置
+- 正文不足200字会警告但仍可发布
 """
 
 import asyncio
@@ -26,25 +33,26 @@ from utils.log import sohu_logger
 
 # ==================== 集中选择器管理 ====================
 SELECTORS = {
-    # 标题
-    "title_input": "input[name='title'], input[placeholder*='标题']",
-    # 正文编辑器（contenteditable）
-    "editor_body": "#editor, .editor-content, [contenteditable='true']",
-    # 封面上传
-    "cover_upload": ".cover-upload",
-    # 图片 file input
-    "image_file_input": "input[type='file'][accept*='image']",
-    # 摘要
-    "summary_input": "textarea[name='summary']",
-    # 发布按钮
-    "publish_btn": "button.publish-btn, button:has-text('发布')",
-    # 栏目选择
-    "column_select": ".column-select",
+    # 标题 — placeholder="请输入标题（5-72字）"
+    "title_input": "input[placeholder*='标题']",
+    # 正文编辑器（Quill.js）
+    "editor_body": ".ql-editor",
+    # 工具栏图片按钮
+    "toolbar_image_btn": "button.ql-image",
+    # 图片上传弹窗中的上传按钮（file input）
+    "image_upload_input": "input[type='file']",
+    # 摘要 textarea
+    "summary_input": "textarea",
+    # 发布按钮 — 是 <li> 元素，不是 <button>
+    "publish_btn": "li.positive-button.publish-report-btn",
+    # 确认弹窗中的"确定"按钮
+    "confirm_btn": "button",
 }
 
 URLS = {
     "home": "https://mp.sohu.com",
-    "editor": "https://mp.sohu.com/api/author/article/new",
+    # 直接导航到编辑器（不需要 SPA 路由跳转）
+    "editor": "https://mp.sohu.com/mpfe/v4/contentManagement/news/addarticle?contentStatus=1",
 }
 
 # 弹窗关闭关键词
@@ -81,17 +89,26 @@ class EditorPage:
             pass
 
     async def navigate_to_editor(self):
-        """导航到文章编辑页面。"""
-        sohu_logger.info("[导航] 正在打开搜狐号文章编辑页...")
-        await self.page.goto(URLS["editor"], timeout=TIMEOUTS["page_load"])
-        await self.page.wait_for_load_state("domcontentloaded")
+        """导航到搜狐号编辑器页面。先加载首页确认登录，再直接导航到编辑器。"""
+        sohu_logger.info("[导航] 正在打开搜狐号后台首页...")
+        await self.page.goto(URLS["home"], timeout=TIMEOUTS["page_load"])
+        await self.page.wait_for_load_state("networkidle")
+        await asyncio.sleep(3)
 
-        # 检查是否被重定向到登录页
+        # 检查是否已登录
         body_text = await self.page.evaluate(
-            "() => document.body?.innerText?.substring(0, 500) || ''"
+            "() => document.body?.innerText?.substring(0, 1000) || ''"
         )
-        if "登录" in body_text and "发布" not in body_text:
+        if "登录" in body_text and "发布内容" not in body_text:
             raise CookieExpiredError("Cookie 已失效，页面显示登录")
+
+        await self._screenshot("01_dashboard")
+
+        # 直接导航到编辑器（不需要 SPA 路由跳转）
+        sohu_logger.info("[导航] 正在打开编辑器...")
+        await self.page.goto(URLS["editor"], timeout=TIMEOUTS["page_load"])
+        await self.page.wait_for_load_state("networkidle")
+        await asyncio.sleep(3)
 
         await self._screenshot("01_editor_loaded")
         sohu_logger.success("[导航] 编辑页已打开")
@@ -133,7 +150,7 @@ class EditorPage:
             await self.page.keyboard.press("Control+KeyA")
             await self.page.keyboard.press("Backspace")
 
-        # 清空正文
+        # 清空正文（Quill.js 编辑器）
         editor = self.page.locator(SELECTORS["editor_body"]).first
         if await editor.count() > 0:
             await editor.click()
@@ -142,8 +159,8 @@ class EditorPage:
 
         # 清除残留图片
         await self.page.evaluate("""() => {
-            const editor = document.querySelector('#editor, .editor-content, [contenteditable="true"]');
-            if (editor) editor.querySelectorAll('img').forEach(img => img.remove());
+            const editor = document.querySelector('.ql-editor');
+            if (editor) editor.querySelectorAll('img, .ql-image-container').forEach(el => el.remove());
         }""")
 
         for _ in range(3):
@@ -153,8 +170,8 @@ class EditorPage:
         sohu_logger.success("[清空] 编辑器已清空")
 
     async def fill_title(self, title: str):
-        """填写文章标题（30 字限制）。"""
-        truncated = title[:30]
+        """填写文章标题（5-72字）。"""
+        truncated = title[:72]
         sohu_logger.info(f"[标题] 填写: {truncated}")
 
         title_input = self.page.locator(SELECTORS["title_input"]).first
@@ -165,7 +182,7 @@ class EditorPage:
         sohu_logger.success("[标题] 已填写")
 
     async def fill_content(self, content: str):
-        """填写正文。contenteditable 编辑器使用 execCommand('insertHTML')。"""
+        """填写正文。Quill.js 编辑器使用 execCommand('insertHTML')。"""
         if not content:
             return
 
@@ -182,7 +199,7 @@ class EditorPage:
 
         if html_content:
             await self.page.evaluate("""(html) => {
-                const editor = document.querySelector('#editor, .editor-content, [contenteditable="true"]');
+                const editor = document.querySelector('.ql-editor');
                 if (editor) {
                     editor.focus();
                     document.execCommand('insertHTML', false, html);
@@ -193,7 +210,7 @@ class EditorPage:
         sohu_logger.success("[正文] 已填写")
 
     async def upload_images(self, image_paths: list[Path]):
-        """上传图片。通过 file input 上传。"""
+        """上传图片。通过工具栏 image 按钮打开上传弹窗，逐张上传。"""
         if not image_paths:
             return
 
@@ -210,55 +227,80 @@ class EditorPage:
         if not valid_images:
             return
 
-        # 找到 file input 并上传
-        file_input = self.page.locator(SELECTORS["image_file_input"]).first
-        try:
-            await file_input.wait_for(state="attached", timeout=TIMEOUTS["click"])
-            await file_input.set_input_files(valid_images)
-        except Exception:
-            # 备选：尝试通过封面上传按钮触发 file input
-            sohu_logger.info("[图片] 尝试通过上传按钮触发...")
-            try:
-                cover_btn = self.page.locator(SELECTORS["cover_upload"]).first
-                if await cover_btn.count() > 0:
-                    await cover_btn.click()
-                    await asyncio.sleep(1)
-                    file_input2 = self.page.locator("input[type='file']").first
-                    await file_input2.set_input_files(valid_images)
-            except Exception as e:
-                sohu_logger.warning(f"[图片] 上传失败: {e}")
-                return
+        # 点击工具栏 image 按钮，打开上传弹窗
+        image_btn = self.page.locator("button.ql-image").first
+        await image_btn.click(timeout=TIMEOUTS["click"])
+        await asyncio.sleep(1)
+
+        # 在上传弹窗中找到 file input 并上传
+        file_input = self.page.locator("input[type='file']").first
+        await file_input.wait_for(state="attached", timeout=TIMEOUTS["click"])
+        await file_input.set_input_files(valid_images)
 
         # 等待上传完成
-        for _ in range(15):
+        for attempt in range(15):
             upload_done = await self.page.evaluate("""() => {
-                const loading = document.querySelector('.ant-upload-animate, .anticon-loading, .uploading');
-                return !loading;
+                const text = document.body?.innerText || '';
+                return text.includes('已成功上传') && !text.includes('上传中');
             }""")
             if upload_done:
                 break
             await asyncio.sleep(2)
 
+        # 点击"确定"按钮将图片插入正文
+        confirm_btn = self.page.locator("text=确定").first
+        try:
+            if await confirm_btn.is_visible():
+                await confirm_btn.click()
+                sohu_logger.debug("[图片] 已点击确定插入图片")
+        except Exception:
+            pass
+
+        await asyncio.sleep(1)
         await self._screenshot("05_images_uploaded")
         sohu_logger.success(f"[图片] {len(valid_images)} 张图片已上传")
 
     async def publish(self):
-        """点击发布按钮。"""
+        """点击发布按钮。搜狐号发布需要两步确认。"""
         sohu_logger.info("[发布] 点击发布按钮...")
 
         await self.dismiss_popups()
 
+        # 第一步：点击"发布"按钮（是 <li> 元素）
         publish_btn = self.page.locator(SELECTORS["publish_btn"]).first
         try:
             await publish_btn.click(timeout=TIMEOUTS["click"])
         except Exception:
-            sohu_logger.warning("[发布] 直接点击失败，尝试 JS 点击...")
+            sohu_logger.warning("[发布] li 元素点击失败，尝试 JS 点击...")
             await self.page.evaluate("""() => {
-                const btn = document.querySelector('button.publish-btn');
-                if (btn) {
-                    btn.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
-                }
+                const btn = document.querySelector('li.positive-button.publish-report-btn');
+                if (btn) btn.click();
             }""")
+
+        await asyncio.sleep(2)
+
+        # 第二步：处理"确认发布文章么？"弹窗，点击"确定"
+        try:
+            confirm_dialog = self.page.locator("text=确认发布文章么").first
+            if await confirm_dialog.is_visible():
+                sohu_logger.info("[发布] 检测到确认弹窗，点击确定...")
+                # 弹窗中的"确定"按钮
+                confirm_btn = self.page.locator("button:has-text('确定')").first
+                if await confirm_btn.is_visible():
+                    await confirm_btn.click()
+                else:
+                    # 用 JS dispatchEvent 兜底
+                    await self.page.evaluate("""() => {
+                        const btns = document.querySelectorAll('button');
+                        for (const btn of btns) {
+                            if (btn.innerText.trim() === '确定') {
+                                btn.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                                break;
+                            }
+                        }
+                    }""")
+        except Exception as e:
+            sohu_logger.warning(f"[发布] 确认弹窗处理异常: {e}")
 
         await asyncio.sleep(3)
         await self._screenshot("06_after_publish")
@@ -276,15 +318,18 @@ class EditorPage:
                 "() => document.body.innerText.substring(0, 2000)"
             )
 
+            # 检测成功关键词
             for kw in success_keywords:
                 if kw in body_text:
                     sohu_logger.success(f"[验证] 发布成功（检测到 '{kw}'）")
                     return True
 
-            if "article/new" not in url and "edit" not in url:
+            # 检测已跳离编辑页
+            if "addarticle" not in url:
                 sohu_logger.success(f"[验证] 已跳转到 {url[:60]}")
                 return True
 
+            # 检测失败关键词
             for kw in error_keywords:
                 if kw in body_text:
                     sohu_logger.error(f"[验证] 发布失败（检测到 '{kw}'）")
@@ -336,34 +381,18 @@ class SohuArticle:
             return await self.upload(playwright)
 
     async def upload(self, playwright: Playwright) -> bool:
-        """执行完整的文章发布流程。"""
+        """执行完整的文章发布流程。使用 CDP 连接本地 Chrome 绕过反爬。"""
         sohu_logger.info(f"{'=' * 20} 开始发布: {self.title} {'=' * 20}")
 
         try:
-            # 启动浏览器
-            launch_args = [
-                "--disable-blink-features=AutomationControlled",
-                "--lang=zh-CN",
-                "--no-sandbox",
-            ]
-            if not self.headless:
-                launch_args.append("--start-maximized")
-            options = {"headless": self.headless, "args": launch_args}
-            if LOCAL_CHROME_PATH:
-                options["executable_path"] = LOCAL_CHROME_PATH
-
-            self._browser = await playwright.chromium.launch(**options)
-
-            context_options = {"locale": "zh-CN"}
-            if self.account_file and Path(self.account_file).exists():
-                context_options["storage_state"] = self.account_file
-            else:
-                raise CookieExpiredError(f"Cookie 文件不存在: {self.account_file}")
-
-            self._context = await self._browser.new_context(**context_options)
-            self._context = await set_init_script(self._context)
-            self._page = await self._context.new_page()
-            sohu_logger.info("[启动] 浏览器已启动")
+            # 通过 CDP 连接本地 Chrome（绕过反爬检测）
+            sohu_logger.info("[启动] 通过 CDP 连接本地 Chrome...")
+            self._browser = await playwright.chromium.connect_over_cdp(
+                "http://127.0.0.1:9222"
+            )
+            context = self._browser.contexts[0] if self._browser.contexts else await self._browser.new_context()
+            self._page = await context.new_page()
+            sohu_logger.info("[启动] 浏览器已连接")
 
             editor = EditorPage(self._page, debug=self.debug)
 
@@ -385,16 +414,13 @@ class SohuArticle:
             if self.image_paths:
                 await editor.upload_images(self.image_paths)
 
-            # 发布
+            # 发布（含两步确认）
             await editor.publish()
 
             # 验证
             success = await editor.verify_publish_success()
 
-            # 保存 cookie
-            account_path = Path(self.account_file)
-            account_path.parent.mkdir(parents=True, exist_ok=True)
-            await self._context.storage_state(path=str(account_path))
+            # CDP 模式：不需要手动保存 cookie，Chrome 自行管理登录态
 
             if success:
                 sohu_logger.success(f"{'=' * 20} 发布完成: {self.title} {'=' * 20}")
@@ -408,21 +434,7 @@ class SohuArticle:
             return False
         except Exception as e:
             sohu_logger.error(f"[异常] {e}")
-            if self.debug and self._page:
-                try:
-                    await self._page.pause()
-                except Exception:
-                    pass
             return False
         finally:
-            try:
-                if self._context:
-                    await self._context.close()
-            except Exception:
-                pass
-            try:
-                if self._browser:
-                    await self._browser.close()
-            except Exception:
-                pass
-            sohu_logger.info("[清理] 浏览器已关闭")
+            # CDP 模式不关闭浏览器（是用户的 Chrome）
+            sohu_logger.info("[清理] 任务结束")

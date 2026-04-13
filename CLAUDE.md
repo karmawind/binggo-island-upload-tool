@@ -370,42 +370,59 @@ sau skill install
 - 检测页面文本包含"已发布"、"发布成功"等关键词
 - 或检测 URL 离开发布页
 
-## 搜狐号图文发布 SOP
+## 搜狐号图文发布 SOP（已验证）
 
-以下经验来自参考项目 aaaaqwq/claude-code-skills media-auto-publisher，修改搜狐号相关代码时务必遵守。
+以下经验来自 2026-04-13 通过 Chrome DevTools MCP 实际发布验证，修改搜狐号相关代码时务必遵守。
 
 ### 编辑器页面
 
-- 编辑器 URL：`https://mp.sohu.com/api/author/article/new`
-- 页面使用 Vue.js + Element UI 构建
+- 编辑器 URL：`https://mp.sohu.com/mpfe/v4/contentManagement/news/addarticle?contentStatus=1`
+- 直接导航到编辑器 URL 即可（不需要 SPA 路由跳转）
+- 页面使用 Vue.js + Quill.js 编辑器构建
 - 登录后页面可能出现"我知道了"、"知道了"等弹窗，需自动关闭
+- 先访问 `https://mp.sohu.com` 首页确认登录态，再导航到编辑器
 
 ### 标题填写
 
-- 选择器：`input[name="title"]` 或 `input[placeholder*="标题"]`
-- 标题限制 30 字
+- 选择器：`input[placeholder*='标题']`（placeholder 为"请输入标题（5-72字）"）
+- 标题限制 5-72 字
 - 使用 `fill()` 一次性填入
 
 ### 正文填写
 
-- 编辑器类型：contenteditable（`#editor` / `.editor-content` / `[contenteditable="true"]`）
-- 使用 `document.execCommand('insertHTML', false, html)` 写入
-- 填写前先 `editor.focus()`
+- 编辑器类型：**Quill.js**（`.ql-editor` 选择器，不是 `[contenteditable='true']`）
+- **必须使用 `document.execCommand('insertHTML', false, html)`** 写入
+- 填写前先 `editor.focus()`（通过 JS `document.querySelector('.ql-editor').focus()`）
 
 ### 图片上传
 
-- 通过 `input[type="file"][accept*="image"]` 上传
-- 备选：通过 `.cover-upload` 按钮触发 file input
+- 通过工具栏 image 按钮（`button.ql-image`）打开上传弹窗
+- 弹窗中有"本地上传"和"素材库"两个 tab
+- 上传按钮是 `input[type='file']` 元素，使用 `set_input_files()` 上传
+- 上传完成后需点击"确定"按钮将图片插入正文
+- 图片限制：10M，格式 jpg/jpeg/png/gif
+- 图片上传后自动同步至素材库（每日 200 张上限）
 
-### 发布按钮
+### 封面图
 
-- 选择器：`button.publish-btn` 或 `button:has-text('发布')`
-- 直接 `.click()` 失败时用 JS `dispatchEvent` 兜底
+- **封面图自动从正文图片选取**，无需手动设置
+- 如不手动设置，系统会自动从文中摘取图片作为封面
+- 封面图片尺寸应大于 450*300
+
+### 发布按钮（两步确认）
+
+- 发布按钮是 **`<li>` 元素**（`li.positive-button.publish-report-btn`），不是 `<button>`
+- 第一步：点击"发布"触发确认弹窗
+- 第二步：确认弹窗显示"确认发布文章么？"，点击"确定"完成发布
+- 正文不足 200 字会警告但仍可发布
+- 直接 `.click()` 可能无效，需用 JS `dispatchEvent` 兜底
 
 ### 验证发布成功
 
-- 检测页面文本包含"发布成功"、"提交成功"、"审核"等关键词
-- 或检测 URL 离开 `/article/new` 页面
+- 发布成功后页面跳转到内容管理页（`/contentManagement/first/page`）
+- 文章列表中显示文章标题和"审核中"状态
+- 检测 URL 离开 `addarticle` 页面
+- 检测页面文本包含"审核中"、"已发布"等关键词
 
 ## 开发规范
 

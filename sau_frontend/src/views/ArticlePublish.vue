@@ -13,6 +13,7 @@
           <el-checkbox :value="6">什么值得买</el-checkbox>
           <el-checkbox :value="7">头条号</el-checkbox>
           <el-checkbox :value="8">携程</el-checkbox>
+          <el-checkbox :value="9">搜狐号</el-checkbox>
         </el-checkbox-group>
       </div>
 
@@ -81,7 +82,7 @@
 
       <!-- 操作按钮 -->
       <div class="action-bar">
-        <el-button @click="saveDraft">保存草稿</el-button>
+        <el-button @click="saveDraft">{{ editingId ? '保存' : '保存草稿' }}</el-button>
         <el-button type="primary" @click="publish" :loading="publishing">
           {{ publishing ? '发布中...' : '立即发布' }}
         </el-button>
@@ -153,6 +154,7 @@
 
 <script setup>
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { Plus, FolderOpened, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -161,8 +163,10 @@ import { accountApi } from '@/api/account'
 import { materialApi } from '@/api/material'
 import { useArticleDraftStore } from '@/stores/articleDraft'
 
-const platformNames = { 5: '百家号', 6: '什么值得买', 7: '头条号', 8: '携程' }
+const platformNames = { 5: '百家号', 6: '什么值得买', 7: '头条号', 8: '携程', 9: '搜狐号' }
+const route = useRoute()
 const draftStore = useArticleDraftStore()
+const editingId = ref(null)
 
 // ref 类型的 store 属性必须用 storeToRefs 解构，否则 Pinia 会自动解包 ref 导致 .value 为 undefined
 const { selectedPlatforms, fileList } = storeToRefs(draftStore)
@@ -286,7 +290,51 @@ const fetchAccounts = async () => {
   }
 }
 
-onMounted(() => { fetchAccounts() })
+onMounted(async () => {
+  await fetchAccounts()
+  const postId = route.query.id
+  if (postId) {
+    try {
+      const res = await articleApi.getPost(postId)
+      if (res.code === 200 && res.data) {
+        editingId.value = res.data.id
+        const post = res.data
+        // 填充表单
+        form.title = post.title || ''
+        form.content = post.content || ''
+        form.location = post.location || ''
+        // 解析 tags
+        try { form.tags = JSON.parse(post.tags || '[]') } catch { form.tags = (post.tags || '').split(',').filter(Boolean) }
+        // 解析 image_paths
+        try {
+          const paths = JSON.parse(post.image_paths || '[]')
+          form.imagePaths = Array.isArray(paths) ? paths : (post.image_paths || '').split(',').filter(Boolean)
+        } catch { form.imagePaths = (post.image_paths || '').split(',').filter(Boolean) }
+        // 解析 platforms
+        try {
+          const plats = JSON.parse(post.platforms || '[]')
+          if (Array.isArray(plats) && plats.length) selectedPlatforms.value = plats
+        } catch {}
+        // 构建 fileList 用于图片预览
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409'
+        fileList.value = form.imagePaths.map(p => {
+          const isLocalPath = /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('/')
+          return {
+            name: p.split(/[/\\]/).pop(),
+            url: isLocalPath
+              ? `${baseUrl}/getLocalFile?path=${encodeURIComponent(p)}`
+              : `${baseUrl}/getFile?filename=${encodeURIComponent(p)}`,
+            uploadedPath: p,
+            status: 'success'
+          }
+        })
+      }
+    } catch (error) {
+      console.error('加载帖子失败:', error)
+      ElMessage.error('加载帖子数据失败')
+    }
+  }
+})
 
 // 打开账号选择对话框
 const openAccountDialog = (pType) => {
@@ -349,24 +397,31 @@ const addTag = () => {
 }
 const removeTag = (tag) => { form.tags = form.tags.filter(t => t !== tag) }
 
-// 保存草稿
+// 保存（编辑时更新，新建时保存草稿）
 const saveDraft = async () => {
   if (!form.title) { ElMessage.warning('请输入标题'); return }
-  try {
-    await articleApi.savePost({
-      title: form.title,
-      content: form.content,
-      image_paths: JSON.stringify(form.imagePaths),
-      tags: JSON.stringify(form.tags),
-      location: form.location,
-      platforms: JSON.stringify(selectedPlatforms.value),
-      account_ids: JSON.stringify(
-        Object.fromEntries(
-          selectedPlatforms.value.map(p => [p, (platformSelectedAccounts[p] || []).map(a => a.id)])
-        )
+  const payload = {
+    title: form.title,
+    content: form.content,
+    image_paths: JSON.stringify(form.imagePaths),
+    tags: JSON.stringify(form.tags),
+    location: form.location,
+    platforms: JSON.stringify(selectedPlatforms.value),
+    account_ids: JSON.stringify(
+      Object.fromEntries(
+        selectedPlatforms.value.map(p => [p, (platformSelectedAccounts[p] || []).map(a => a.id)])
       )
-    })
-    ElMessage.success('草稿已保存')
+    )
+  }
+  try {
+    if (editingId.value) {
+      payload.id = editingId.value
+      await articleApi.updatePost(payload)
+      ElMessage.success('保存成功')
+    } else {
+      await articleApi.savePost(payload)
+      ElMessage.success('草稿已保存')
+    }
   } catch (error) {
     ElMessage.error('保存失败')
   }

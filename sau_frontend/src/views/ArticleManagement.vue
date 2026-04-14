@@ -65,6 +65,7 @@
         <div class="batch-actions">
           <el-button type="primary" @click="batchPublish" :loading="batchPublishing">批量立即发布</el-button>
           <el-button type="warning" @click="showScheduleDialog">排期发布</el-button>
+          <el-button type="danger" @click="batchDelete">批量删除</el-button>
         </div>
       </div>
     </div>
@@ -245,6 +246,20 @@ const confirmSchedule = async () => {
       ElMessage.error(res.msg)
     }
   } catch { ElMessage.error('排期失败') }
+}
+
+const batchDelete = async () => {
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedPosts.value.length} 篇帖子吗？此操作不可撤销。`, '批量删除', { type: 'warning' })
+    const res = await articleApi.batchDeletePosts(selectedPosts.value.map(p => p.id))
+    if (res.code === 200) {
+      ElMessage.success(res.msg)
+      selectedPosts.value = []
+      fetchPosts()
+    } else {
+      ElMessage.error(res.msg)
+    }
+  } catch { /* cancelled */ }
 }
 
 // CSV 导入

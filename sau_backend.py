@@ -1,4 +1,5 @@
 import asyncio
+import io
 import json
 import os
 import shutil
@@ -11,7 +12,7 @@ from pathlib import Path
 from queue import Queue
 from flask_cors import CORS
 from myUtils.auth import check_cookie
-from flask import Flask, request, jsonify, Response, render_template, send_from_directory
+from flask import Flask, request, jsonify, Response, render_template, send_from_directory, send_file
 from conf import BASE_DIR
 from myUtils.login import get_tencent_cookie, douyin_cookie_gen, get_ks_cookie, xiaohongshu_cookie_gen
 from myUtils.postVideo import post_video_tencent, post_video_DouYin, post_video_ks, post_video_xhs
@@ -94,6 +95,25 @@ def get_file():
 
     # 返回文件
     return send_from_directory(file_path,filename)
+
+
+@app.route('/getLocalFile', methods=['GET'])
+def get_local_file():
+    """按本地绝对路径返回文件（仅限图片/视频，用于预览）。"""
+    filepath = request.args.get('path', '').strip().strip('"').strip("'")
+    if not filepath:
+        return jsonify({"code": 400, "msg": "path is required", "data": None}), 400
+    # 安全检查
+    if '..' in filepath:
+        return jsonify({"code": 400, "msg": "Invalid path", "data": None}), 400
+    resolved = Path(filepath).resolve()
+    if not resolved.exists() or not resolved.is_file():
+        return jsonify({"code": 404, "msg": "File not found", "data": None}), 404
+    # 仅允许图片和视频
+    allowed_ext = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv'}
+    if resolved.suffix.lower() not in allowed_ext:
+        return jsonify({"code": 403, "msg": "File type not allowed", "data": None}), 403
+    return send_file(str(resolved), mimetype='application/octet-stream')
 
 
 @app.route('/uploadSave', methods=['POST'])
@@ -815,6 +835,26 @@ def get_article_posts():
         return jsonify({"code": 500, "msg": str(e), "data": None}), 500
 
 
+@app.route('/getArticlePost', methods=['GET'])
+def get_article_post():
+    """获取单篇图文帖子。"""
+    post_id = request.args.get('id')
+    if not post_id or not post_id.isdigit():
+        return jsonify({"code": 400, "msg": "Invalid ID", "data": None}), 400
+    try:
+        with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM article_posts WHERE id = ?", (post_id,))
+            row = cursor.fetchone()
+            if not row:
+                return jsonify({"code": 404, "msg": "帖子不存在", "data": None}), 404
+            data = dict(row)
+        return jsonify({"code": 200, "msg": "success", "data": data}), 200
+    except Exception as e:
+        return jsonify({"code": 500, "msg": str(e), "data": None}), 500
+
+
 @app.route('/deleteArticlePost', methods=['GET'])
 def delete_article_post():
     """删除图文帖子。"""
@@ -831,6 +871,24 @@ def delete_article_post():
         return jsonify({"code": 500, "msg": str(e), "data": None}), 500
 
 
+@app.route('/batchDeleteArticlePosts', methods=['POST'])
+def batch_delete_article_posts():
+    """批量删除图文帖子。"""
+    data = request.get_json()
+    ids = data.get('ids', []) if data else []
+    if not ids:
+        return jsonify({"code": 400, "msg": "请选择要删除的帖子", "data": None}), 400
+    try:
+        with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
+            cursor = conn.cursor()
+            placeholders = ','.join('?' for _ in ids)
+            cursor.execute(f"DELETE FROM article_posts WHERE id IN ({placeholders})", ids)
+            conn.commit()
+        return jsonify({"code": 200, "msg": f"已删除 {len(ids)} 篇帖子", "data": None}), 200
+    except Exception as e:
+        return jsonify({"code": 500, "msg": str(e), "data": None}), 500
+
+
 @app.route('/updateArticlePost', methods=['POST'])
 def update_article_post():
     """更新图文帖子内容。"""
@@ -843,8 +901,8 @@ def update_article_post():
             cursor.execute('''
                 UPDATE article_posts
                 SET title = ?, content = ?, image_paths = ?, tags = ?,
-                    location = ?, platform = ?, account_ids = ?,
-                    updated_at = CURRENT_TIMESTAMP
+                    location = ?, platform = ?, platforms = ?, video_path = ?,
+                    account_ids = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             ''', (
                 data.get('title', ''),
@@ -853,6 +911,8 @@ def update_article_post():
                 data.get('tags', ''),
                 data.get('location', ''),
                 data.get('platform', 0),
+                data.get('platforms', ''),
+                data.get('video_path', ''),
                 data.get('account_ids', ''),
                 data['id']
             ))
@@ -1309,6 +1369,14 @@ def downloadArticleTemplate():
     writer.writerow([])
     writer.writerow(['1=小红书  2=视频号  3=抖音  4=快手  5=百家号  6=什么值得买  7=头条号  8=携程  9=搜狐号', '必填', '图文内容(视频平台可留空)', '视频文件路径(图文平台可留空)', '图片路径(多张用逗号隔开)', '逗号隔开', '仅携程必填'])
 
+    csv_bytes = csv_content.getvalue().encode('utf-8-sig')
+    return send_file(
+        io.BytesIO(csv_bytes),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name='article_template.csv'
+    )
+
 
 @app.route('/importArticles', methods=['POST'])
 def importArticles():
@@ -1325,7 +1393,7 @@ def importArticles():
 
     try:
         stream = io.StringIO(file.read().decode('utf-8-sig'))
-        reader = csv.DictReader(stream)
+        rows = list(csv.reader(stream))
 
         # 平台名称 → ID 映射（全部平台）
         PLATFORM_NAME_TO_ID = {
@@ -1339,6 +1407,33 @@ def importArticles():
             '携程': 8, 'ctrip': 8,
             '搜狐号': 9, 'sohu': 9,
         }
+
+        # 表头关键词 → 列索引映射
+        HEADER_KEYS = ['平台', '标题', '正文', '视频', '图片', '标签', '地点']
+        col_map = {}  # key → index
+
+        # 检测第一行是否为表头
+        first = rows[0] if rows else []
+        is_header = any(h in HEADER_KEYS for h in first)
+        data_start = 1 if is_header else 0
+
+        if is_header:
+            for idx, h in enumerate(first):
+                h_strip = h.strip()
+                if h_strip in HEADER_KEYS:
+                    col_map[h_strip] = idx
+        else:
+            # 无表头时按固定列顺序：平台=0 标题=1 正文=2 视频=3 图片=4 标签=5 地点=6
+            for i, key in enumerate(HEADER_KEYS):
+                col_map[key] = i
+
+        def get_col(row, key):
+            """按列名或索引取值。"""
+            idx = col_map.get(key)
+            if idx is not None and idx < len(row):
+                val = (row[idx] or '').strip().strip('"').strip("'")
+                return val
+            return ''
 
         def parse_platforms(raw: str) -> str:
             """将平台字段解析为 JSON 数组字符串。支持中文名/英文名/ID，逗号分隔。"""
@@ -1369,19 +1464,19 @@ def importArticles():
                 cursor.execute("ALTER TABLE article_posts ADD COLUMN video_path TEXT DEFAULT ''")
                 conn.commit()
 
-            for row in reader:
-                title = row.get('title', row.get('\u6807\u9898', '')).strip()
-                content = row.get('content', row.get('\u6b63\u6587', '')).strip()
+            for row in rows[data_start:]:
+                title = get_col(row, '标题')
+                content = get_col(row, '正文')
                 if not title or title.startswith('---') or title.startswith('平台:') or title.startswith('1='):
                     continue
 
-                raw_platforms = row.get('platforms', row.get('\u5e73\u53f0', ''))
+                raw_platforms = get_col(row, '平台')
                 platforms_json = parse_platforms(raw_platforms)
 
-                image_paths = row.get('image_paths', row.get('\u56fe\u7247\u8def\u5f84', row.get('\u56fe\u7247', '')))
-                tags = row.get('tags', row.get('\u6807\u7b7e', ''))
-                location = row.get('location', row.get('\u5730\u70b9', ''))
-                video_path = row.get('video_path', row.get('\u89c6\u9891', ''))
+                image_paths = get_col(row, '图片')
+                tags = get_col(row, '标签')
+                location = get_col(row, '地点')
+                video_path = get_col(row, '视频')
 
                 cursor.execute('''
                     INSERT INTO article_posts (title, content, image_paths, tags, location, video_path, platform, platforms, status)

@@ -439,6 +439,46 @@ sau skill install
 *   版本历史记录在 `CHANGELOG.md` 中。
 *   新增平台或功能时，需同步更新 `CHANGELOG.md` 和 `CLAUDE.md`。
 
+## 图文管理系统 SOP（v0.2.6）
+
+### CSV 导入
+
+- **模板下载**：`GET /downloadArticleTemplate`，返回 CSV 文件流（`send_file`）
+- **导入接口**：`POST /importArticles`，支持有表头和无表头两种 CSV 格式
+- **表头检测**：自动检测第一行是否含"平台/标题/正文/视频/图片/标签/地点"关键词，无表头时按固定列顺序
+- **路径清理**：自动去除值两端的多余引号 `"` 和 `'`
+- **列顺序**：平台(0) → 标题(1) → 正文(2) → 视频(3) → 图片(4) → 标签(5) → 地点(6)
+
+### 图片预览
+
+- **服务器文件**：`/getFile?filename=xxx`，从 `videoFile` 目录读取
+- **本地文件**：`/getLocalFile?path=绝对路径`，按绝对路径读取本地文件（仅限图片/视频格式，禁止路径穿越）
+- 前端根据路径是否为本地绝对路径（`C:\...`）自动选择接口
+- **不复制文件到项目目录**，避免项目膨胀
+
+### 帖子编辑
+
+- 编辑跳转：`/article-publish?id=xxx`
+- `onMounted` 检测路由 `id` 参数，调用 `GET /getArticlePost?id=` 加载数据填充表单
+- 编辑模式按钮文字为"保存"，调用 `POST /updateArticlePost` 更新
+- 新建模式按钮文字为"保存草稿"，调用 `POST /saveArticlePost` 新建
+- `updateArticlePost` 需包含 `platforms` 和 `video_path` 字段
+
+### 帖子管理
+
+- 批量删除：`POST /batchDeleteArticlePosts`，接收 `{ ids: [1,2,3] }`
+- 前端批量操作栏已有：批量发布、排期发布、批量删除
+
+### 百家号发布按钮
+
+- 发布按钮点击后需重试最多 3 次，每次检查弹窗并验证 URL 跳转
+- 方法1（`data-testid`）和方法2（文本匹配）均需 `mousedown` + `mouseup` + `click` 三连事件
+
+### 搜狐号平台
+
+- 图文发布页已添加搜狐号选项（ID=9）
+- 平台名称映射：`{ ..., 9: '搜狐号' }`
+
 ## 铁律
 
 **每实现一个功能，经我确认后，必须将更新日志和踩过的坑总结到 `CHANGELOG.md` 中。**

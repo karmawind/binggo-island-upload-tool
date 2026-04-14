@@ -37,6 +37,11 @@ export const articleApi = {
     return http.get('/getArticlePosts')
   },
 
+  // 获取单篇帖子
+  getPost(id) {
+    return http.get(`/getArticlePost?id=${id}`)
+  },
+
   // 保存帖子（新建草稿）
   savePost(data) {
     return http.post('/saveArticlePost', data)
@@ -50,6 +55,11 @@ export const articleApi = {
   // 删除帖子
   deletePost(id) {
     return http.get(`/deleteArticlePost?id=${id}`)
+  },
+
+  // 批量删除帖子
+  batchDeletePosts(ids) {
+    return http.post('/batchDeleteArticlePosts', { ids })
   },
 
   // 批量排期

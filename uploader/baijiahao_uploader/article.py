@@ -445,46 +445,64 @@ class EditorPage:
         await self.page.evaluate("window.scrollTo(0, 0)")
         await asyncio.sleep(0.5)
 
-        # 用 JS 触发真实鼠标事件点击发布按钮
-        clicked = await self.page.evaluate("""
-            () => {
-                // 方法1：通过 data-testid，dispatch 真实鼠标事件
-                let el = document.querySelector('[data-testid="publish-btn"]');
-                if (el) {
-                    // 优先找内部 button 子元素
-                    const innerBtn = el.querySelector('button') || el;
-                    innerBtn.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, cancelable: true}));
-                    innerBtn.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, cancelable: true}));
-                    innerBtn.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
-                    return 'data-testid';
-                }
+        for attempt in range(3):
+            baijiahao_logger.info(f"尝试点击发布按钮 (第 {attempt + 1} 次)...")
 
-                // 方法2：通过文本匹配 button 元素
-                const buttons = document.querySelectorAll('button');
-                for (const b of buttons) {
-                    const text = b.innerText?.trim();
-                    if (text === '发布' || text === '提交') {
-                        b.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
-                        return 'text:' + text;
+            # 用 JS 触发真实鼠标事件点击发布按钮
+            clicked = await self.page.evaluate("""
+                () => {
+                    // 方法1：通过 data-testid，dispatch 真实鼠标事件
+                    let el = document.querySelector('[data-testid="publish-btn"]');
+                    if (el) {
+                        // 优先找内部 button 子元素
+                        const innerBtn = el.querySelector('button') || el;
+                        innerBtn.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, cancelable: true}));
+                        innerBtn.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, cancelable: true}));
+                        innerBtn.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                        return 'data-testid';
                     }
+
+                    // 方法2：通过文本匹配 button 元素
+                    const buttons = document.querySelectorAll('button');
+                    for (const b of buttons) {
+                        const text = b.innerText?.trim();
+                        if (text === '发布' || text === '提交') {
+                            b.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, cancelable: true}));
+                            b.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, cancelable: true}));
+                            b.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                            return 'text:' + text;
+                        }
+                    }
+
+                    return null;
                 }
+            """)
 
-                return null;
-            }
-        """)
+            if clicked:
+                baijiahao_logger.info(f"已通过 JS 点击发布按钮 (方式: {clicked})")
+            else:
+                baijiahao_logger.error("JS 未找到发布按钮")
+                return
 
-        if clicked:
-            baijiahao_logger.info(f"已通过 JS 点击发布按钮 (方式: {clicked})")
-        else:
-            baijiahao_logger.error("JS 未找到发布按钮")
+            await asyncio.sleep(3)
+            # 处理可能的确认弹窗
+            dismissed = await self._dismiss_modal()
+            if dismissed:
+                baijiahao_logger.info("已处理弹窗")
 
-        await asyncio.sleep(3)
-        await self._dismiss_modal()
+            # 检查 URL 是否已变化（说明发布成功开始跳转）
+            await asyncio.sleep(2)
+            url = self.page.url
+            if "/builder/rc/clue" in url or "/builder/rc/home" in url:
+                baijiahao_logger.success("发布按钮点击成功，页面已开始跳转")
+                return
 
-        # 再次尝试关闭残留遮罩
-        for _ in range(3):
-            await self.page.keyboard.press("Escape")
-            await asyncio.sleep(0.3)
+            # 如果没跳转，再处理一下弹窗后重试
+            for _ in range(3):
+                await self.page.keyboard.press("Escape")
+                await asyncio.sleep(0.3)
+
+        baijiahao_logger.warning("3 次尝试后仍未检测到跳转")
 
     async def verify_publish_success(self) -> bool:
         """验证发布是否成功（检测页面跳转或审核提示）。"""

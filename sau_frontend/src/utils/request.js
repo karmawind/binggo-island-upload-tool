@@ -29,7 +29,12 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   (response) => {
     const { data } = response
-    
+
+    // blob 类型响应（文件下载）直接返回原始 data
+    if (data instanceof Blob) {
+      return data
+    }
+
     // 根据后端接口规范处理响应
     if (data.code === 200 || data.success) {
       return data

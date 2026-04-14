@@ -2,6 +2,26 @@
 
 All notable changes to `social-auto-upload` will be documented in this file.
 
+## [0.2.6] - 2026-04-14
+
+### Fixed
+
+- **CSV 模板下载 500 错误** — `downloadArticleTemplate()` 函数缺少 `return` 语句，补上 `send_file` 返回 CSV 文件流；同时添加 `import io` 和 `send_file` 导入
+- **CSV 模板下载被拦截器误判** — axios 响应拦截器对 Blob 类型响应做了 `data.code` 检查导致"请求失败"，增加 `Blob instanceof` 判断直接放行
+- **CSV 导入 0 篇** — 用户 CSV 无表头行时 `DictReader` 把数据行当字段名，改为 `csv.reader` + 自动检测表头，无表头时按固定列顺序读取
+- **CSV 图片路径含多余引号** — `get_col()` 自动 `.strip('"')`，避免路径两端 `"` 导致文件找不到
+- **编辑帖子表单空白** — 新增 `GET /getArticlePost?id=` 接口 + 前端 `onMounted` 检测路由 `id` 参数，自动加载并填充标题/正文/标签/图片/平台/地点
+- **编辑模式无保存按钮** — "保存草稿"改为动态文字：新建时"保存草稿"，编辑时"保存"；编辑保存调用 `updateArticlePost` 而非新建
+- **`updateArticlePost` 缺少字段** — 补上 `platforms` 和 `video_path` 字段的更新
+- **图片预览失败（本地路径）** — 新增 `/getLocalFile?path=` 接口按绝对路径读取本地文件（仅限图片/视频格式），前端根据路径类型自动选择 `/getFile` 或 `/getLocalFile`
+- **百家号发布按钮点击无效** — 发布按钮改为重试 3 次机制，每次点击后检查弹窗并验证 URL 跳转；方法2 也改为 `mousedown`+`mouseup`+`click` 三连事件
+
+### Added
+
+- **搜狐号平台选项** — 图文发布页平台选择新增"搜狐号"（ID=9）
+- **批量删除帖子** — 帖子管理页批量操作栏新增"批量删除"按钮，后端新增 `POST /batchDeleteArticlePosts` 接口
+- **单篇帖子查询** — 后端新增 `GET /getArticlePost?id=` 接口
+
 ## [0.2.5] - 2026-04-14
 
 ### Added

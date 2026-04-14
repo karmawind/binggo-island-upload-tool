@@ -1293,6 +1293,23 @@ def scheduleArticles():
         return jsonify({"code": 500, "msg": str(e), "data": None}), 500
 
 
+@app.route('/downloadArticleTemplate', methods=['GET'])
+def downloadArticleTemplate():
+    """下载 CSV 导入模板。"""
+    import csv as csv_mod
+    csv_content = io.StringIO()
+    writer = csv_mod.writer(csv_content)
+    writer.writerow(['平台', '标题', '正文', '视频', '图片', '标签', '地点'])
+    writer.writerow([])
+    writer.writerow(['--- 删除此行及上方行，在下方填写你的内容 ---', '', '', '', '', '', ''])
+    writer.writerow([])
+    writer.writerow(['3', '探店vlog', '', 'C:/videos/shop.mp4', '', '探店,美食', ''])
+    writer.writerow(['5,7', '今日推荐好物', '今天给大家推荐一款超好用的产品...', '', 'C:/images/pic1.png,C:/images/pic2.png', '好物推荐,种草', ''])
+    writer.writerow(['8', '杭州三日游攻略', 'Day1 西湖十景...', '', 'C:/images/hangzhou1.png', '旅游,攻略', '杭州'])
+    writer.writerow([])
+    writer.writerow(['1=小红书  2=视频号  3=抖音  4=快手  5=百家号  6=什么值得买  7=头条号  8=携程  9=搜狐号', '必填', '图文内容(视频平台可留空)', '视频文件路径(图文平台可留空)', '图片路径(多张用逗号隔开)', '逗号隔开', '仅携程必填'])
+
+
 @app.route('/importArticles', methods=['POST'])
 def importArticles():
     """批量导入帖子（CSV 文件）。"""
@@ -1310,26 +1327,74 @@ def importArticles():
         stream = io.StringIO(file.read().decode('utf-8-sig'))
         reader = csv.DictReader(stream)
 
+        # 平台名称 → ID 映射（全部平台）
+        PLATFORM_NAME_TO_ID = {
+            '小红书': 1, 'xiaohongshu': 1, 'xhs': 1,
+            '视频号': 2, 'tencent': 2,
+            '抖音': 3, 'douyin': 3,
+            '快手': 4, 'kuaishou': 4, 'ks': 4,
+            '百家号': 5, 'baijiahao': 5,
+            '什么值得买': 6, 'smzdm': 6,
+            '头条号': 7, 'toutiao': 7,
+            '携程': 8, 'ctrip': 8,
+            '搜狐号': 9, 'sohu': 9,
+        }
+
+        def parse_platforms(raw: str) -> str:
+            """将平台字段解析为 JSON 数组字符串。支持中文名/英文名/ID，逗号分隔。"""
+            if not raw or not raw.strip():
+                return '[]'
+            ids = []
+            for part in raw.replace('，', ',').split(','):
+                part = part.strip()
+                if not part:
+                    continue
+                if part.isdigit():
+                    pid = int(part)
+                    if 1 <= pid <= 9:
+                        ids.append(pid)
+                    continue
+                pid = PLATFORM_NAME_TO_ID.get(part.lower())
+                if pid:
+                    ids.append(pid)
+            return json.dumps(list(dict.fromkeys(ids)))
+
         count = 0
         with sqlite3.connect(Path(BASE_DIR) / "db" / "database.db") as conn:
             cursor = conn.cursor()
+            # 确保 video_path 列存在
+            cursor.execute("PRAGMA table_info(article_posts)")
+            existing_cols = [c[1] for c in cursor.fetchall()]
+            if 'video_path' not in existing_cols:
+                cursor.execute("ALTER TABLE article_posts ADD COLUMN video_path TEXT DEFAULT ''")
+                conn.commit()
+
             for row in reader:
                 title = row.get('title', row.get('\u6807\u9898', '')).strip()
                 content = row.get('content', row.get('\u6b63\u6587', '')).strip()
-                if not title:
+                if not title or title.startswith('---') or title.startswith('平台:') or title.startswith('1='):
                     continue
 
+                raw_platforms = row.get('platforms', row.get('\u5e73\u53f0', ''))
+                platforms_json = parse_platforms(raw_platforms)
+
+                image_paths = row.get('image_paths', row.get('\u56fe\u7247\u8def\u5f84', row.get('\u56fe\u7247', '')))
+                tags = row.get('tags', row.get('\u6807\u7b7e', ''))
+                location = row.get('location', row.get('\u5730\u70b9', ''))
+                video_path = row.get('video_path', row.get('\u89c6\u9891', ''))
+
                 cursor.execute('''
-                    INSERT INTO article_posts (title, content, image_paths, tags, location, platform, platforms, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'draft')
+                    INSERT INTO article_posts (title, content, image_paths, tags, location, video_path, platform, platforms, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft')
                 ''', (
                     title,
                     content,
-                    row.get('image_paths', row.get('\u56fe\u7247\u8def\u5f84', '')),
-                    row.get('tags', row.get('\u6807\u7b7e', '')),
-                    row.get('location', row.get('\u5730\u70b9', '')),
+                    image_paths,
+                    tags,
+                    location,
+                    video_path,
                     0,
-                    row.get('platforms', row.get('\u5e73\u53f0', '[]')),
+                    platforms_json,
                 ))
                 count += 1
             conn.commit()

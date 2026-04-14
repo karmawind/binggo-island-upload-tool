@@ -21,6 +21,11 @@ export const articleApi = {
     return http.post('/postArticle', data)
   },
 
+  // 发布视频
+  publishVideo(data) {
+    return http.post('/postVideo', data)
+  },
+
   // 查询发布任务状态
   getTaskStatus(taskId) {
     return http.get(`/articleTaskStatus?taskId=${taskId}`)
@@ -54,6 +59,16 @@ export const articleApi = {
   // 导入 CSV
   importArticles(formData) {
     return http.upload('/importArticles', formData)
+  },
+
+  // 下载 CSV 导入模板
+  downloadTemplate() {
+    const link = document.createElement('a')
+    link.href = '/downloadArticleTemplate'
+    link.download = 'article_template.csv'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   },
 
   // 从素材库复制图片到图文图片目录

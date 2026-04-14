@@ -2,9 +2,23 @@
 
 All notable changes to `social-auto-upload` will be documented in this file.
 
-## [0.2.4] - 2026-04-14
+## [0.2.5] - 2026-04-14
 
-### Fixed
+### Added
+
+- **CSV 导入支持全部平台** — 模板和导入逻辑覆盖 1-9 全部平台（小红书/视频号/抖音/快手/百家号/什么值得买/头条号/携程/搜狐号）
+- **CSV 导入支持视频发布** — 新增"视频"列，填本地路径即可；发布时自动分流：1-4 调 `/postVideo`，5-9 调 `/postArticle`
+- **CSV 模板下载端点** — `GET /downloadArticleTemplate`，返回含示例行和平台映射说明的 CSV 模板
+- **DB 自动迁移** — 导入时自动检测并添加 `video_path` 列，无需手动执行迁移
+- **帖子列表显示平台列** — `ArticleManagement.vue` 表格新增"平台"列，将 ID 数组转为中文名称显示
+
+### Changed
+
+- **CSV 列顺序调整** — 平台 → 标题 → 正文 → 视频 → 图片 → 标签 → 地点
+- **平台解析扩展** — 支持 1-9 全部平台 ID，无效 ID 自动过滤
+- **搜狐号自动化方式文档修正** — 明确标注搜狐号通过 Chrome DevTools MCP 发布，不走 patchright
+
+## [0.2.4] - 2026-04-14
 
 - **搜狐号图文发布完整流程验证通过** — 通过 Chrome DevTools MCP 实际发布验证，修复所有已知问题
 - **编辑器类型识别错误** — 编辑器实际为 Quill.js（`.ql-editor`），而非简单 contenteditable；选择器从 `[contenteditable='true']` 修正为 `.ql-editor`

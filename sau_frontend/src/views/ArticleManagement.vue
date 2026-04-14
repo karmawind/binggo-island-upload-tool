@@ -19,6 +19,7 @@
         <div class="toolbar-right">
           <el-button @click="fetchPosts" :icon="Refresh">刷新</el-button>
           <el-button @click="triggerImport">导入 CSV</el-button>
+          <el-button @click="articleApi.downloadTemplate()">下载模板</el-button>
           <el-button type="primary" @click="goToPublish">新建帖子</el-button>
           <input ref="csvInput" type="file" accept=".csv" style="display:none" @change="handleImport" />
         </div>
@@ -28,6 +29,15 @@
       <el-table :data="filteredPosts" style="width: 100%" @selection-change="handleSelection">
         <el-table-column type="selection" width="50" />
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+        <el-table-column label="平台" width="140">
+          <template #default="scope">
+            <span v-if="scope.row.platforms && scope.row.platforms !== '[]'">
+              {{ formatPlatforms(scope.row.platforms) }}
+            </span>
+            <span v-else-if="scope.row.platform" style="color:#a1a1aa">{{ formatPlatformId(scope.row.platform) }}</span>
+            <span v-else style="color:#a1a1aa">未设置</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-tag :type="getStatusType(scope.row.status)" effect="plain">{{ statusLabel(scope.row.status) }}</el-tag>
@@ -104,6 +114,12 @@ const scheduleForm = reactive({ startTime: '', interval: 60 })
 const getStatusType = (status) => ({ draft: 'info', scheduled: '', publishing: 'warning', published: 'success', failed: 'danger' }[status] || 'info')
 const statusLabel = (status) => ({ draft: '草稿', scheduled: '已排期', publishing: '发布中', published: '已发布', failed: '失败' }[status] || status)
 
+const PLATFORM_ID_TO_NAME = { 1: '小红书', 2: '视频号', 3: '抖音', 4: '快手', 5: '百家号', 6: '什么值得买', 7: '头条号', 8: '携程', 9: '搜狐号' }
+const formatPlatformId = (id) => PLATFORM_ID_TO_NAME[id] || `平台${id}`
+const formatPlatforms = (jsonStr) => {
+  try { return (JSON.parse(jsonStr) || []).map(id => PLATFORM_ID_TO_NAME[id] || `平台${id}`).join(', ') } catch { return jsonStr }
+}
+
 const filteredPosts = computed(() => {
   return posts.value.filter(p => {
     if (filterStatus.value && p.status !== filterStatus.value) return false
@@ -143,6 +159,8 @@ const deletePost = async (post) => {
   } catch { /* cancelled */ }
 }
 
+const VIDEO_PLATFORMS = new Set([1, 2, 3, 4])
+
 const publishSingle = async (post) => {
   const platforms = JSON.parse(post.platforms || '[]')
   const singlePlatform = post.platform || 0
@@ -150,23 +168,47 @@ const publishSingle = async (post) => {
 
   if (!targetPlatforms.length) { ElMessage.warning('帖子未关联平台'); return }
 
-  const pa = {}
-  for (const pt of targetPlatforms) {
+  const imagePaths = JSON.parse(post.image_paths || '[]')
+  const tags = JSON.parse(post.tags || '[]')
+
+  // 按视频/图文分组
+  const videoPlatforms = targetPlatforms.filter(p => VIDEO_PLATFORMS.has(p))
+  const articlePlatforms = targetPlatforms.filter(p => !VIDEO_PLATFORMS.has(p))
+
+  // 发布视频
+  for (const pt of videoPlatforms) {
     const accs = allAccounts.value.filter(a => a.type === pt && a.status === 1)
-    if (!accs.length) { ElMessage.warning(`${pt} 没有可用账号`); return }
-    pa[pt] = accs.map(a => a.filePath)
+    if (!accs.length) { ElMessage.warning(`${formatPlatformId(pt)} 没有可用账号`); return }
+    if (!post.video_path) { ElMessage.warning(`${formatPlatformId(pt)} 需要视频文件路径`); return }
+    try {
+      const res = await articleApi.publishVideo({
+        type: pt, title: post.title, fileList: [post.video_path],
+        tags, accountList: accs.map(a => a.filePath),
+        category: 0, enableTimer: 0, videosPerDay: 1, dailyTimes: ['10:00'], startDays: 0,
+        productLink: '', productTitle: '', isDraft: false, thumbnail: ''
+      })
+      if (res.code === 200) ElMessage.success(`${formatPlatformId(pt)} 发布任务已提交`)
+      else ElMessage.error(res.msg || `${formatPlatformId(pt)} 发布失败`)
+    } catch { ElMessage.error(`${formatPlatformId(pt)} 发布失败`) }
   }
 
-  try {
-    const imagePaths = JSON.parse(post.image_paths || '[]')
-    const tags = JSON.parse(post.tags || '[]')
-    const res = await articleApi.publishArticle({
-      title: post.title, content: post.content, imageList: imagePaths,
-      tags, location: post.location || '', platformAccounts: pa
-    })
-    if (res.code === 200) ElMessage.success('发布任务已提交')
-    else ElMessage.error(res.msg || '发布失败')
-  } catch { ElMessage.error('发布失败') }
+  // 发布图文
+  if (articlePlatforms.length) {
+    const pa = {}
+    for (const pt of articlePlatforms) {
+      const accs = allAccounts.value.filter(a => a.type === pt && a.status === 1)
+      if (!accs.length) { ElMessage.warning(`${formatPlatformId(pt)} 没有可用账号`); return }
+      pa[pt] = accs.map(a => a.filePath)
+    }
+    try {
+      const res = await articleApi.publishArticle({
+        title: post.title, content: post.content, imageList: imagePaths,
+        tags, location: post.location || '', platformAccounts: pa
+      })
+      if (res.code === 200) ElMessage.success('图文发布任务已提交')
+      else ElMessage.error(res.msg || '图文发布失败')
+    } catch { ElMessage.error('图文发布失败') }
+  }
 }
 
 const batchPublish = async () => {

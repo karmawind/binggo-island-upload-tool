@@ -1,4 +1,5 @@
 import { http } from '@/utils/request'
+import request from '@/utils/request'
 
 export const articleApi = {
   // 上传图片
@@ -62,13 +63,16 @@ export const articleApi = {
   },
 
   // 下载 CSV 导入模板
-  downloadTemplate() {
+  async downloadTemplate() {
+    const res = await request.get('/downloadArticleTemplate', { responseType: 'blob' })
+    const blob = new Blob([res], { type: 'text/csv;charset=utf-8-sig' })
     const link = document.createElement('a')
-    link.href = '/downloadArticleTemplate'
+    link.href = URL.createObjectURL(blob)
     link.download = 'article_template.csv'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(link.href)
   },
 
   // 从素材库复制图片到图文图片目录

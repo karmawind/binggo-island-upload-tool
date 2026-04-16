@@ -2,6 +2,50 @@
 
 All notable changes to `social-auto-upload` will be documented in this file.
 
+## [0.2.8] - 2026-04-15
+
+### Added
+
+- **微博平台全流程支持** — 新增微博图文发布功能（平台 ID=10），覆盖后端、CLI、前端、技能包
+  - 上传器：`uploader/weibo_uploader/`（__init__.py、main.py、article.py）
+  - 使用桌面版 `weibo.com` 发帖（从移动版 `m.weibo.cn` 迁移，桌面版更稳定）
+  - patchright `chromium.launch()` + `storage_state` 方式（从 CDP `connect_over_cdp` 迁移）
+  - 桌面版发帖流程：点击"写微博"按钮 → 弹出对话框 → textarea 输入正文 → file input 上传图片 → 点击"发送"按钮
+  - 登录检测：检查 URL 不包含 "newlogin" + 检测头像元素，双重验证
+  - 微博特殊性：无标题字段（title 拼接到 content 前）、无标签、最多 9 张图、约 2000 字
+- **CLI 命令**：`sau weibo login/check/upload-article`
+- **前端**：账号管理页新增微博 tab、发布页新增微博选项
+- **技能包**：`skills/weibo-upload/`
+
+### Changed
+
+- **微博从移动版改为桌面版** — `weibo_uploader/article.py` 从 `m.weibo.cn`（移动版 textarea + file input）改为 `weibo.com`（桌面版弹窗对话框），交互更稳定可靠
+- **微博从 CDP 改为 patchright launch** — 从 `connect_over_cdp` + 手动 cookie 注入改为 `chromium.launch()` + `storage_state` 自动加载 cookie，无需本地 Chrome 调试端口
+- **什么值得买改为 CDP 模式** — `smzdm_uploader/article.py` 从 `chromium.launch` 改为 `connect_over_cdp` + cookie 注入（待测试验证）
+
+### Verified
+
+- 微博图文发布端到端验证通过：登录 → cookie 校验 → 桌面版发帖（写微博弹窗 → 正文 → 图片上传 → 发送）→ 图片上传成功确认
+
+## [0.2.7] - 2026-04-15
+
+### 搜狐号 CDP 发帖踩坑总结
+
+- **CDP 连接的 Chrome 没有 Cookie** — `article.py` 用 `connect_over_cdp()` 连接本地 Chrome，但独立 profile 没有搜狐登录态；cookie 文件只在 patchright `storage_state` 生效，不自动注入 CDP context。修复：CDP 连接后手动 `context.add_cookies()` 注入 `sohu.com` 域名 cookie
+- **`wait_for_load_state("networkidle")` 超时** — 搜狐后台加载慢，30s 超时不够。推荐用 `asyncio.sleep(5)` 替代 `networkidle`
+- **Chrome 必须先关闭再以调试模式重启** — 已运行的 Chrome 无法附加调试端口，必须 `taskkill /F /IM chrome.exe` 后用 `--remote-debugging-port=9222` 重启
+- **可跳过首页确认步骤** — 如果已注入 cookie，直接导航到编辑器 URL 即可，无需先访问首页
+
+### Added
+
+- **搜狐号 `article.py` Cookie 自动注入** — CDP 连接后自动从 `account_file` 读取 cookie 并注入到浏览器 context，兼顾 CDP 反爬能力和账号管理 cookie 系统
+- **账号管理页新增搜狐号** — 平台下拉选项、Tab 页签、平台类型映射（type=9）、SSE 登录通道全部补齐
+- **平台下拉菜单自适应高度** — 添加账号弹窗中的平台选择器不再被截断，所有 9 个平台选项完整可见
+
+### Fixed
+
+- **`start.bat` 路径警告** — 6 处 Unix 风格 `>/dev/null` 改为 Windows `>nul`，消除"系统找不到指定的路径"红色报错
+
 ## [0.2.6] - 2026-04-14
 
 ### Fixed

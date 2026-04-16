@@ -22,6 +22,7 @@
 """
 
 import asyncio
+import json
 from pathlib import Path
 
 from patchright.async_api import Page, async_playwright, Playwright
@@ -391,6 +392,24 @@ class SohuArticle:
                 "http://127.0.0.1:9222"
             )
             context = self._browser.contexts[0] if self._browser.contexts else await self._browser.new_context()
+
+            # 从 cookie 文件注入登录态到 CDP context
+            if self.account_file:
+                cookie_path = Path(self.account_file)
+                if cookie_path.exists():
+                    state = json.loads(cookie_path.read_text(encoding="utf-8"))
+                    sohu_cookies = [
+                        c for c in state.get("cookies", [])
+                        if "sohu.com" in c.get("domain", "")
+                    ]
+                    if sohu_cookies:
+                        await context.add_cookies(sohu_cookies)
+                        sohu_logger.info(f"[Cookie] 已注入 {len(sohu_cookies)} 条 cookie")
+                    else:
+                        sohu_logger.warning("[Cookie] 文件中无 sohu.com 域名 cookie")
+                else:
+                    sohu_logger.warning(f"[Cookie] 文件不存在: {cookie_path}")
+
             self._page = await context.new_page()
             sohu_logger.info("[启动] 浏览器已连接")
 

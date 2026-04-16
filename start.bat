@@ -6,7 +6,7 @@ echo   Social Auto Upload - One-Click Start
 echo ========================================
 echo.
 
-where python >/dev/null 2>&1
+where python >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Python not found.
     pause
@@ -37,7 +37,7 @@ if not exist ".venv\Scripts\activate.bat" (
 
 call .venv\Scripts\activate.bat
 
-python -c "import flask" >/dev/null 2>&1
+python -c "import flask" >nul 2>&1
 if errorlevel 1 (
     echo [INFO] Installing Python dependencies...
     pip install -r requirements.txt
@@ -51,7 +51,7 @@ if errorlevel 1 (
     echo [OK] Python deps ready
 )
 
-python -c "from patchright.sync_api import sync_playwright" >/dev/null 2>&1
+python -c "from patchright.sync_api import sync_playwright" >nul 2>&1
 if errorlevel 1 (
     echo [WARN] Installing patchright chromium...
     python -m patchright install chromium
@@ -111,8 +111,8 @@ echo [INFO] Waiting for backend...
 set BACKEND_READY=0
 for /L %%i in (1,1,15) do (
     if !BACKEND_READY! equ 0 (
-        timeout /t 1 /nobreak >/dev/null
-        curl -s -o nul http://localhost:5409 2>/dev/null
+        timeout /t 1 /nobreak >nul
+        curl -s -o nul http://localhost:5409 2>nul
         if not errorlevel 1 (
             set BACKEND_READY=1
         )
@@ -127,7 +127,7 @@ if !BACKEND_READY! equ 1 (
 echo [2/2] Starting frontend on port 5173...
 start "" cmd /k "title SAU Frontend && cd sau_frontend && npm run dev"
 
-timeout /t 3 /nobreak >/dev/null
+timeout /t 3 /nobreak >nul
 
 echo.
 echo ========================================
@@ -137,7 +137,7 @@ echo   Frontend: http://localhost:5173
 echo ========================================
 echo.
 echo Opening browser...
-timeout /t 2 /nobreak >/dev/null
+timeout /t 2 /nobreak >nul
 start http://localhost:5173
 echo.
 pause

@@ -56,6 +56,10 @@ from uploader.sohu_uploader.main import (
     cookie_auth as sohu_cookie_auth,
     sohu_setup,
 )
+from uploader.weibo_uploader.main import (
+    cookie_auth as weibo_cookie_auth,
+    weibo_setup,
+)
 
 SCHEDULE_FORMAT = "%Y-%m-%d %H:%M"
 
@@ -191,6 +195,17 @@ class CtripArticleUploadRequest:
 
 @dataclass(slots=True)
 class SohuArticleUploadRequest:
+    account_name: str
+    title: str
+    content: str
+    image_files: list[Path]
+    tags: list[str]
+    debug: bool = True
+    headless: bool = True
+
+
+@dataclass(slots=True)
+class WeiboArticleUploadRequest:
     account_name: str
     title: str
     content: str
@@ -438,6 +453,22 @@ async def check_sohu_account(account_name: str) -> bool:
     if not account_file.exists():
         return False
     return await sohu_cookie_auth(str(account_file))
+
+
+async def login_weibo_account(account_name: str, headless: bool = False) -> dict:
+    account_file = resolve_account_file("weibo", account_name)
+    try:
+        await weibo_setup(str(account_file), handle=True)
+        return {"success": True, "account_file": str(account_file)}
+    except Exception as e:
+        return {"success": False, "message": str(e), "account_file": str(account_file)}
+
+
+async def check_weibo_account(account_name: str) -> bool:
+    account_file = resolve_account_file("weibo", account_name)
+    if not account_file.exists():
+        return False
+    return await weibo_cookie_auth(str(account_file))
     account_file = resolve_account_file("douyin", request.account_name)
     is_ready = await douyin_setup(str(account_file), handle=False)
     if not is_ready:
@@ -833,6 +864,24 @@ def build_parser() -> argparse.ArgumentParser:
     sohu_upload_article_parser.add_argument("--tags", default="", help="Comma-separated tags, such as tag1,tag2")
     add_runtime_flags(sohu_upload_article_parser)
 
+    # ── Weibo ──
+    weibo_parser = platform_parsers.add_parser("weibo", help="Weibo operations")
+    weibo_actions = weibo_parser.add_subparsers(dest="action", required=True)
+
+    for action_name in ("login", "check"):
+        action_parser = weibo_actions.add_parser(action_name, help=f"Weibo {action_name}")
+        action_parser.add_argument("--account", required=True, help="Weibo user-defined account_name")
+        if action_name == "login":
+            add_runtime_flags(action_parser)
+
+    weibo_upload_article_parser = weibo_actions.add_parser("upload-article", help="Post to Weibo")
+    weibo_upload_article_parser.add_argument("--account", required=True, help="Weibo user-defined account_name")
+    weibo_upload_article_parser.add_argument("--title", default="", help="Post title (prepended to content)")
+    weibo_upload_article_parser.add_argument("--content", default="", help="Post content text")
+    weibo_upload_article_parser.add_argument("--images", nargs="+", type=existing_file_path, default=[], help="Image file paths (max 9)")
+    weibo_upload_article_parser.add_argument("--tags", default="", help="(Ignored for Weibo)")
+    add_runtime_flags(weibo_upload_article_parser)
+
     return parser
 
 
@@ -1224,6 +1273,54 @@ async def dispatch(args: argparse.Namespace) -> int:
             return 0
 
         raise RuntimeError(f"Unsupported Sohu action: {args.action}")
+
+    if args.platform == "weibo":
+        if args.action == "login":
+            result = await login_weibo_account(args.account, headless=args.headless)
+            if not result["success"]:
+                raise RuntimeError(result["message"])
+            print(f"Weibo login flow completed: {result['account_file']}")
+            return 0
+
+        if args.action == "check":
+            is_valid = await check_weibo_account(args.account)
+            print("valid" if is_valid else "invalid")
+            return 0 if is_valid else 1
+
+        if args.action == "upload-article":
+            from uploader.weibo_uploader.article import WeiboArticle
+
+            request = WeiboArticleUploadRequest(
+                account_name=args.account,
+                title=args.title,
+                content=args.content,
+                image_files=parse_image_files(args.images) if args.images else [],
+                tags=parse_tags(args.tags),
+                debug=args.debug,
+                headless=args.headless,
+            )
+            account_file = resolve_account_file("weibo", request.account_name)
+            is_ready = await weibo_setup(str(account_file), handle=False)
+            if not is_ready:
+                raise RuntimeError(
+                    f"Weibo cookie is missing or expired: {account_file}. Run `sau weibo login --account {request.account_name}` first."
+                )
+            app = WeiboArticle(
+                title=request.title,
+                content=request.content,
+                image_paths=[str(p) for p in request.image_files],
+                tags=request.tags,
+                account_file=str(account_file),
+                headless=request.headless,
+                debug=request.debug,
+            )
+            success = await app.main()
+            if not success:
+                raise RuntimeError(f"Weibo post publish failed for: {request.title or '(no title)'}")
+            print(f"Weibo post submitted: {request.title or '(no title)'}")
+            return 0
+
+        raise RuntimeError(f"Unsupported Weibo action: {args.action}")
 
     raise RuntimeError(f"Unsupported platform: {args.platform}")
 

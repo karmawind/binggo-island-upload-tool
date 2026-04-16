@@ -29,7 +29,7 @@
 
 项目还提供命令行界面（CLI），方便偏好终端操作的用户使用。
 
-支持的平台：`douyin`、`kuaishou`、`xiaohongshu`、`bilibili`、`baijiahao`、`smzdm`、`ctrip`、`sohu`。
+支持的平台：`douyin`、`kuaishou`、`xiaohongshu`、`bilibili`、`baijiahao`、`smzdm`、`ctrip`、`sohu`、`weibo`。
 
 每个平台支持：
 *   `login`：登录并保存 cookie。
@@ -172,6 +172,16 @@ sau sohu upload-article --account <账号名> --title <标题> --content "正文
 ```
 
 搜狐号图文发布使用 contenteditable 编辑器，标题限制 30 字，使用 `fill()` 填入。正文使用 `execCommand('insertHTML')` 写入。推荐使用 `--headed` 模式。不支持定时发布。
+
+**微博：**
+
+```bash
+sau weibo login --account <账号名>
+sau weibo check --account <账号名>
+sau weibo upload-article --account <账号名> --title "标题" --content "正文" --images 图片1.jpg 图片2.png
+```
+
+微博是微客平台（短文本+图片），无标题字段（title 拼接到 content 前）、无标签、最多 9 张图。使用桌面版 weibo.com 发帖（点击"写微博"按钮打开弹窗）。使用 patchright `chromium.launch()` + `storage_state`（非 CDP）。不支持定时发布。
 
 **安装内置技能包：**
 
@@ -372,7 +382,20 @@ sau skill install
 
 ## 搜狐号图文发布 SOP（已验证）
 
-以下经验来自 2026-04-13 通过 Chrome DevTools MCP 实际发布验证，修改搜狐号相关代码时务必遵守。
+以下经验来自 2026-04-13（Chrome DevTools MCP）和 2026-04-15（CLI + CDP）两次实际发布验证，修改搜狐号相关代码时务必遵守。
+
+### CDP 连接与 Cookie 注入（关键坑）
+
+- **CDP 连接的 Chrome 没有登录态**：`article.py` 使用 `connect_over_cdp("http://127.0.0.1:9222")` 连接用户本地 Chrome，但如果是用独立 `--user-data-dir` 启动的 Chrome，不会有任何 cookie
+- **Cookie 文件不自动注入到 CDP context**：`sohu_test.json` 只对 patchright 的 `new_context(storage_state=...)` 生效，CDP 连接的浏览器需要手动用 `context.add_cookies()` 注入
+- **修复方案**：CDP 连接成功后，读取 `cookies/sohu_<account>.json`，过滤 `sohu.com` 域名的 cookie，通过 `context.add_cookies()` 注入到 CDP context 中
+- **Chrome 必须以调试模式启动**：`chrome.exe --remote-debugging-port=9222 --user-data-dir=...`；如果 Chrome 已在运行（无调试端口），必须先 `taskkill` 关闭所有进程再重启，不能附加到已有进程
+
+### 页面加载超时
+
+- **`wait_for_load_state("networkidle")` 经常超时**：搜狐后台页面加载慢（首屏多次 commit/domcontentloaded/load 事件），30s 默认超时不够
+- **推荐用 `await asyncio.sleep(N)` 替代 `networkidle`**：导航后直接 `sleep(5)` 等待页面渲染，比 `networkidle` 更稳定
+- **`page_load` 超时设为 60000ms**：`goto()` 的 timeout 参数要足够大（60s）
 
 ### 编辑器页面
 
@@ -381,6 +404,7 @@ sau skill install
 - 页面使用 Vue.js + Quill.js 编辑器构建
 - 登录后页面可能出现"我知道了"、"知道了"等弹窗，需自动关闭
 - 先访问 `https://mp.sohu.com` 首页确认登录态，再导航到编辑器
+- **可以跳过首页确认**：如果已通过 `add_cookies()` 注入 cookie，直接导航到编辑器 URL 即可
 
 ### 标题填写
 
@@ -424,6 +448,51 @@ sau skill install
 - 检测 URL 离开 `addarticle` 页面
 - 检测页面文本包含"审核中"、"已发布"等关键词
 
+## 微博图文发布 SOP（已验证）
+
+以下经验来自 2026-04-15 实际发布验证，修改微博相关代码时务必遵守。
+
+### 平台特殊性
+
+- 微博是**微客**（短文本+图片），不是文章平台
+- **没有标题字段** — `title` 会被拼接到 `content` 前面（`title + "\n" + content`）
+- **没有标签功能** — `tags` 参数被静默忽略
+- **最多 9 张图片**，超出自动截断
+- **最多约 2000 字**，超出自动截断
+- 不支持定时发布
+
+### 发帖页面
+
+- 使用桌面版 `https://weibo.com/`（非移动版 m.weibo.cn）
+- 导航到 `https://weibo.com/` 首页
+- 点击"写微博"按钮打开发帖弹窗（compose dialog）
+- 登录指标：URL 不包含 "newlogin" 且页面存在 `img.woo-avatar-img` 元素
+- Cookie 文件在 `weibo.com` 上登录后保存
+
+### 正文填写
+
+- 选择器：`textarea[placeholder="有什么新鲜事想分享给大家？"]`
+- 使用 `fill()` 一次性填入
+- 不需要 `execCommand`，普通 textarea 即可
+
+### 图片上传
+
+- 选择器：`input[type="file"]`（弹窗中最后一个）
+- 支持多文件上传（`set_input_files` 一次传入多个路径）
+
+### 发布按钮
+
+- 选择器：`button.woo-button-primary`（文本为"发送"，弹窗中最后一个）
+- 直接 `.click()`，无两步确认
+- 发布后页面跳离 compose 页面
+
+### 浏览器启动方式
+
+- 使用 patchright `chromium.launch()` + `storage_state`（**不是 CDP**）
+- Cookie 文件在 `weibo.com` 上登录后保存
+- 登录检测：URL 离开 "newlogin" 页面 + 检测到头像元素 `img.woo-avatar-img`
+- Cookie 覆盖域名：`.weibo.com`、`.weibo.cn`、`.sina.com.cn`
+
 ## 开发规范
 
 *   后端代码位于根目录以及 `myUtils` 和 `uploader` 目录。
@@ -433,7 +502,7 @@ sau skill install
 *   `requirements.txt` 列出了 Python 依赖。
 *   `sau_frontend` 目录下的 `package.json` 列出了前端依赖。
 *   浏览器自动化使用 `patchright`（无反爬检测的 Playwright 分支），而非 `playwright`。
-*   各平台上传器位于 `uploader/<平台>_uploader/`。百家号同时包含视频上传器（`main.py`）和图文上传器（`article.py`）。什么值得买、头条号和携程包含登录（`main.py`）和图文上传器（`article.py`）。
+*   各平台上传器位于 `uploader/<平台>_uploader/`。百家号同时包含视频上传器（`main.py`）和图文上传器（`article.py`）。什么值得买、头条号、携程和微博包含登录（`main.py`）和图文上传器（`article.py`）。搜狐号使用 CDP（`connect_over_cdp`）方式发帖；微博使用 patchright `chromium.launch()` + `storage_state` 方式。
 *   技能包位于 `skills/<平台>-upload/`，提供 SKILL.md、CLI 约定、运行时要求、故障排查和示例脚本。
 *   Cookie 文件存储在 `cookies/<平台>_<账号名>.json`。
 *   版本历史记录在 `CHANGELOG.md` 中。
@@ -477,10 +546,12 @@ sau skill install
 ### 搜狐号平台
 
 - 图文发布页已添加搜狐号选项（ID=9）
-- 平台名称映射：`{ ..., 9: '搜狐号' }`
+- 平台名称映射：`{ ..., 9: '搜狐号', 10: '微博' }`
 
 ## 铁律
 
 **每实现一个功能，经我确认后，必须将更新日志和踩过的坑总结到 `CHANGELOG.md` 中。**
 
 **所有平台的自动化测试必须从空白/干净的编辑器状态开始，绝不延续上一次测试的编辑状态。** 残留的标题、正文、图片、遮罩面板、弹窗等 DOM 元素会导致后续所有操作出现不可预见的情况（按钮被遮挡、内容重复、选择器匹配错误、上传面板异常等）。每次发布/测试前必须有清空编辑器的步骤。
+
+**使用 Chrome MCP（CDP `connect_over_cdp`）方式发帖时，Cookie 必须从账号管理的 cookie 文件注入，不能依赖浏览器自身的登录态。** CDP 连接的 Chrome 可能是独立 profile（无登录态），必须通过 `context.add_cookies()` 将 `cookies/<platform>_<account>.json` 中对应域名的 cookie 注入到 context。这样做既保留了 CDP 的反爬能力，又让账号管理系统（login → check → upload）完整闭环。参考 `uploader/sohu_uploader/article.py` 中的 cookie 注入实现。

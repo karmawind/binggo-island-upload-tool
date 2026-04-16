@@ -14,6 +14,7 @@
           <el-checkbox :value="7">头条号</el-checkbox>
           <el-checkbox :value="8">携程</el-checkbox>
           <el-checkbox :value="9">搜狐号</el-checkbox>
+          <el-checkbox :value="10">微博</el-checkbox>
         </el-checkbox-group>
       </div>
 
@@ -163,7 +164,7 @@ import { accountApi } from '@/api/account'
 import { materialApi } from '@/api/material'
 import { useArticleDraftStore } from '@/stores/articleDraft'
 
-const platformNames = { 5: '百家号', 6: '什么值得买', 7: '头条号', 8: '携程', 9: '搜狐号' }
+const platformNames = { 5: '百家号', 6: '什么值得买', 7: '头条号', 8: '携程', 9: '搜狐号', 10: '微博' }
 const route = useRoute()
 const draftStore = useArticleDraftStore()
 const editingId = ref(null)

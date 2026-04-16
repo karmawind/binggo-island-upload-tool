@@ -3,7 +3,7 @@
     <el-card class="about-card">
       <div class="about-header">
         <h1>灵感岛推文分发器</h1>
-        <p class="version">v0.1.5</p>
+        <p class="version">v0.2.8</p>
       </div>
 
       <el-divider />
@@ -33,6 +33,8 @@
             <el-tag type="danger">什么值得买</el-tag>
             <el-tag type="warning">头条号</el-tag>
             <el-tag>携程</el-tag>
+            <el-tag type="success">搜狐号</el-tag>
+            <el-tag type="danger">微博</el-tag>
           </div>
         </div>
       </div>
@@ -40,7 +42,7 @@
       <div class="about-section">
         <h3>核心功能</h3>
         <ul class="feature-list">
-          <li>8 平台账号管理（扫码登录 / CLI 登录 / Cookie 上传）</li>
+          <li>10 平台账号管理（扫码登录 / CLI 登录 / Cookie 上传）</li>
           <li>视频素材上传与管理</li>
           <li>图文帖子编辑、保存草稿、一键发布</li>
           <li>帖子批量管理，多选批量发布</li>
@@ -48,7 +50,7 @@
           <li>定时发布与批量发布</li>
           <li>发布任务进度实时跟踪</li>
           <li>Cookie 导入导出与自动校验</li>
-          <li>CLI 命令行接口（支持 8 平台登录、校验、发布）</li>
+          <li>CLI 命令行接口（支持 10 平台登录、校验、发布）</li>
         </ul>
       </div>
 

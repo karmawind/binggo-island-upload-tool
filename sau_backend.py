@@ -1074,7 +1074,7 @@ def download_cookie():
 # ==================== 图文平台 SSE 登录（调用 CLI） ====================
 
 # 图文平台 CLI 名称映射
-ARTICLE_CLI_PLATFORMS = {5: 'baijiahao', 6: 'smzdm', 7: 'toutiao', 8: 'ctrip', 9: 'sohu'}
+ARTICLE_CLI_PLATFORMS = {5: 'baijiahao', 6: 'smzdm', 7: 'toutiao', 8: 'ctrip', 9: 'sohu', 10: 'weibo'}
 
 @app.route('/loginArticleAccount')
 def login_article_account():
@@ -1406,6 +1406,7 @@ def importArticles():
             '头条号': 7, 'toutiao': 7,
             '携程': 8, 'ctrip': 8,
             '搜狐号': 9, 'sohu': 9,
+            '微博': 10, 'weibo': 10,
         }
 
         # 表头关键词 → 列索引映射
@@ -1446,7 +1447,7 @@ def importArticles():
                     continue
                 if part.isdigit():
                     pid = int(part)
-                    if 1 <= pid <= 9:
+                    if 1 <= pid <= 10:
                         ids.append(pid)
                     continue
                 pid = PLATFORM_NAME_TO_ID.get(part.lower())

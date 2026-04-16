@@ -13,6 +13,7 @@
 """
 
 import asyncio
+import json
 from pathlib import Path
 
 from patchright.async_api import Page, async_playwright, Playwright
@@ -437,74 +438,72 @@ class SmzdmArticle:
             return await self.upload(playwright)
 
     async def upload(self, playwright: Playwright) -> bool:
-        """执行完整的文章发布流程。"""
-        smzdm_logger.info(f"===== 开始发布: {self.title} =====")
+        """执行完整的文章发布流程。使用 CDP 连接本地 Chrome 绕过反爬。"""
+        smzdm_logger.info(f"{'=' * 20} 开始发布: {self.title} {'=' * 20}")
 
         try:
-            # Step 1: 启动浏览器
-            options = {
-                "headless": self.headless,
-                "args": [
-                    "--disable-blink-features=AutomationControlled",
-                    "--lang=zh-CN",
-                    "--no-sandbox",
-                ],
-            }
-            if LOCAL_CHROME_PATH:
-                options["executable_path"] = LOCAL_CHROME_PATH
+            # 通过 CDP 连接本地 Chrome（绕过反爬检测）
+            smzdm_logger.info("[启动] 通过 CDP 连接本地 Chrome...")
+            self._browser = await playwright.chromium.connect_over_cdp(
+                "http://127.0.0.1:9222"
+            )
+            context = self._browser.contexts[0] if self._browser.contexts else await self._browser.new_context()
 
-            self._browser = await playwright.chromium.launch(**options)
+            # 从 cookie 文件注入登录态到 CDP context
+            if self.account_file:
+                cookie_path = Path(self.account_file)
+                if cookie_path.exists():
+                    state = json.loads(cookie_path.read_text(encoding="utf-8"))
+                    smzdm_cookies = [
+                        c for c in state.get("cookies", [])
+                        if "smzdm.com" in c.get("domain", "")
+                    ]
+                    if smzdm_cookies:
+                        await context.add_cookies(smzdm_cookies)
+                        smzdm_logger.info(f"[Cookie] 已注入 {len(smzdm_cookies)} 条 cookie")
+                    else:
+                        smzdm_logger.warning("[Cookie] 文件中无 smzdm.com 域名 cookie")
+                else:
+                    smzdm_logger.warning(f"[Cookie] 文件不存在: {cookie_path}")
 
-            context_options = {}
-            if self.account_file and Path(self.account_file).exists():
-                context_options["storage_state"] = self.account_file
+            self._page = await context.new_page()
+            smzdm_logger.info("[启动] 浏览器已连接")
 
-            self._context = await self._browser.new_context(**context_options)
-            self._context = await set_init_script(self._context)
-            self._page = await self._context.new_page()
-            smzdm_logger.info("浏览器已启动")
-
-            # Step 2: 打开编辑器 + 等待加载 + 关闭弹窗
+            # 打开编辑器 + 等待加载 + 关闭弹窗
             editor = EditorPage(self._page)
             await editor.navigate_to_editor()
             await editor.wait_for_editor_ready()
             await editor.clear_editor()
             await asyncio.sleep(1)
 
-            # Step 3: 填写标题
+            # 填写标题
             await editor.fill_title(self.title)
 
-            # Step 4: 填写正文
+            # 填写正文
             if self.content:
                 await editor.fill_content(self.content)
 
-            # Step 5: 先添加长图封面（此时 file input 还可用）
+            # 先添加长图封面（此时 file input 还可用）
             if self.image_paths:
                 await editor.upload_cover_image(self.image_paths[0])
 
-            # Step 6: 上传图片到正文（会打开上传面板并关闭）
+            # 上传图片到正文（会打开上传面板并关闭）
             if self.image_paths:
                 await editor.upload_images_to_content(self.image_paths)
 
-            # Step 7: 设置创作声明
+            # 设置创作声明
             await editor.set_declaration()
 
-            # Step 8: 发布
+            # 发布
             await editor.publish()
 
-            # Step 9: 验证发布结果
+            # 验证发布结果
             success = await editor.verify_publish_success()
 
-            # Step 10: 保存 cookie
-            account_path = Path(self.account_file)
-            account_path.parent.mkdir(parents=True, exist_ok=True)
-            await self._context.storage_state(path=str(account_path))
-            smzdm_logger.info("Cookie 已更新")
-
             if success:
-                smzdm_logger.success(f"===== 发布完成: {self.title} =====")
+                smzdm_logger.success(f"{'=' * 20} 发布完成: {self.title} {'=' * 20}")
             else:
-                smzdm_logger.warning(f"===== 发布结果未确认: {self.title} =====")
+                smzdm_logger.warning(f"{'=' * 20} 发布结果未确认: {self.title} {'=' * 20}")
 
             return success
 
@@ -512,23 +511,8 @@ class SmzdmArticle:
             smzdm_logger.error("Cookie 已失效，请重新登录")
             return False
         except Exception as e:
-            smzdm_logger.error(f"发布失败: {e}")
-            if self.debug and self._page:
-                smzdm_logger.info("【调试模式】浏览器已暂停")
-                try:
-                    await self._page.pause()
-                except Exception:
-                    pass
+            smzdm_logger.error(f"[异常] {e}")
             return False
         finally:
-            try:
-                if self._context:
-                    await self._context.close()
-            except Exception:
-                pass
-            try:
-                if self._browser:
-                    await self._browser.close()
-            except Exception:
-                pass
-            smzdm_logger.info("浏览器已关闭")
+            # CDP 模式不关闭浏览器（是用户的 Chrome）
+            smzdm_logger.info("[清理] 任务结束")

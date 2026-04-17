@@ -1600,10 +1600,10 @@ def importArticles():
             for row in rows[data_start:]:
                 title = get_col(row, '标题')
                 content = get_col(row, '正文')
-                if not title or title.startswith('---') or title.startswith('平台:') or title.startswith('1='):
+                raw_platforms = get_col(row, '平台')
+                if not title or title.startswith('---') or title.startswith('平台:') or title.startswith('1=') or raw_platforms.startswith('1='):
                     continue
 
-                raw_platforms = get_col(row, '平台')
                 platforms_json = parse_platforms(raw_platforms)
 
                 image_paths = get_col(row, '图片')

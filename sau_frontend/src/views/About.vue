@@ -3,7 +3,7 @@
     <el-card class="about-card">
       <div class="about-header">
         <h1>灵感岛推文分发器</h1>
-        <p class="version">v0.2.8</p>
+        <p class="version">v0.3.0</p>
       </div>
 
       <el-divider />

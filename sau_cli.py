@@ -660,6 +660,7 @@ def schedule_value(value: str):
 
 def add_runtime_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--group", default="", help="Operator group name (e.g. '张三')")
     headless_group = parser.add_mutually_exclusive_group()
     headless_group.add_argument("--headed", dest="headless", action="store_false", help="Run with browser UI")
     headless_group.add_argument("--headless", dest="headless", action="store_true", help="Run in headless mode")
@@ -885,6 +886,24 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _update_account_group(account_name: str, platform_cli_name: str, group_name: str) -> None:
+    """如果提供了 --group，在数据库中为对应账号设置 group_name。"""
+    if not group_name:
+        return
+    import sqlite3
+    db_path = Path(BASE_DIR) / "db" / "database.db"
+    if not db_path.exists():
+        return
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute(
+                'UPDATE user_info SET group_name=? WHERE userName=?',
+                (group_name, account_name)
+            )
+    except Exception as e:
+        print(f"[WARN] Failed to set group: {e}")
+
+
 async def dispatch(args: argparse.Namespace) -> int:
     if args.platform == "douyin":
         if args.action == "login":
@@ -892,6 +911,7 @@ async def dispatch(args: argparse.Namespace) -> int:
             if not result["success"]:
                 raise RuntimeError(result["message"])
             print(f"Douyin login flow completed: {result['account_file']}")
+            _update_account_group(args.account, "douyin", getattr(args, 'group', ''))
             return 0
 
         if args.action == "check":
@@ -944,6 +964,7 @@ async def dispatch(args: argparse.Namespace) -> int:
             if not result["success"]:
                 raise RuntimeError(result["message"])
             print(f"Kuaishou login flow completed: {result['account_file']}")
+            _update_account_group(args.account, "kuaishou", getattr(args, 'group', ''))
             return 0
 
         if args.action == "check":
@@ -994,6 +1015,7 @@ async def dispatch(args: argparse.Namespace) -> int:
             if not result["success"]:
                 raise RuntimeError(result["message"])
             print(f"Xiaohongshu login flow completed: {result['account_file']}")
+            _update_account_group(args.account, "xiaohongshu", getattr(args, 'group', ''))
             return 0
 
         if args.action == "check":
@@ -1046,6 +1068,7 @@ async def dispatch(args: argparse.Namespace) -> int:
             if not result["success"]:
                 raise RuntimeError(result["message"])
             print(f"Bilibili login flow completed: {result['account_file']}")
+            _update_account_group(args.account, "bilibili", getattr(args, 'group', ''))
             return 0
 
         if args.action == "check":
@@ -1075,6 +1098,7 @@ async def dispatch(args: argparse.Namespace) -> int:
             if not result["success"]:
                 raise RuntimeError(result["message"])
             print(f"Baijiahao login flow completed: {result['account_file']}")
+            _update_account_group(args.account, "baijiahao", getattr(args, 'group', ''))
             return 0
 
         if args.action == "check":
@@ -1105,6 +1129,7 @@ async def dispatch(args: argparse.Namespace) -> int:
             if not result["success"]:
                 raise RuntimeError(result["message"])
             print(f"SMZDM login flow completed: {result['account_file']}")
+            _update_account_group(args.account, "smzdm", getattr(args, 'group', ''))
             return 0
 
         if args.action == "check":
@@ -1134,6 +1159,7 @@ async def dispatch(args: argparse.Namespace) -> int:
             if not result["success"]:
                 raise RuntimeError(result["message"])
             print(f"Toutiao login flow completed: {result['account_file']}")
+            _update_account_group(args.account, "toutiao", getattr(args, 'group', ''))
             return 0
 
         if args.action == "check":
@@ -1182,6 +1208,7 @@ async def dispatch(args: argparse.Namespace) -> int:
             if not result["success"]:
                 raise RuntimeError(result["message"])
             print(f"Ctrip login flow completed: {result['account_file']}")
+            _update_account_group(args.account, "ctrip", getattr(args, 'group', ''))
             return 0
 
         if args.action == "check":
@@ -1232,6 +1259,7 @@ async def dispatch(args: argparse.Namespace) -> int:
             if not result["success"]:
                 raise RuntimeError(result["message"])
             print(f"Sohu login flow completed: {result['account_file']}")
+            _update_account_group(args.account, "sohu", getattr(args, 'group', ''))
             return 0
 
         if args.action == "check":
@@ -1280,6 +1308,7 @@ async def dispatch(args: argparse.Namespace) -> int:
             if not result["success"]:
                 raise RuntimeError(result["message"])
             print(f"Weibo login flow completed: {result['account_file']}")
+            _update_account_group(args.account, "weibo", getattr(args, 'group', ''))
             return 0
 
         if args.action == "check":

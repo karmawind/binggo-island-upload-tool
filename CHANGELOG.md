@@ -2,6 +2,37 @@
 
 All notable changes to `social-auto-upload` will be documented in this file.
 
+## [0.3.0] - 2026-04-17
+
+### Added
+
+- **运营者管理系统** — 独立管理运营者（增/删/重命名），与账号解耦
+  - 新增 `operators` 数据库表（迁移 v4）
+  - 账号管理页新增「运营者管理」按钮，弹窗支持添加、重命名、删除运营者
+  - 删除运营者时自动解除关联账号的绑定，重命名时自动同步关联账号
+  - 添加账号弹窗新增运营者下拉选择（仅从已有运营者中选择）
+  - 表格内运营者列可直接切换账号归属（单个转移）
+  - 运营者筛选下拉：账号管理页、帖子管理页、图文发布页均支持按运营者过滤
+- **帖子管理行内选账号** — 展开帖子行即可为每个平台选择发布账号，无需进入编辑页
+  - 账号选择自动保存到 `article_posts.selected_accounts` 字段
+  - 发布时优先使用绑定账号，兜底使用全部有效账号
+- **批量选择账号发布** — 勾选多篇帖子后，弹窗统一选择各平台账号，一键批量发布
+- **CLI --group 参数** — 登录时可通过 `--group 张三` 指定运营者分组
+- **后端新接口** — `GET /getGroups`、`POST /addOperator`、`POST /deleteOperator`、`POST /renameOperator`、`POST /updateAccountGroup`、`POST /updatePostAccounts`
+
+### Changed
+
+- **调度器优化** — 排期发布时优先使用帖子绑定的 `selected_accounts`，而非全部有效账号
+- **account store 补全** — `platformTypes` 补上 `9: '搜狐号'`、`10: '微博'`
+
+### Fixed
+
+- **start.bat 双开浏览器** — 去掉 bat 中手动打开浏览器的逻辑，保留 Vite 自动打开
+- **图文发布默认选中百家号** — `selectedPlatforms` 默认值改为空数组
+- **帖子管理显示"平台10"** — `PLATFORM_ID_TO_NAME` 补上 `10: '微博'`
+- **CSV 模板缺少微博编号** — 后端模板说明补上 `10=微博`
+- **帖子管理页语法错误** — 修复 `v-model` 使用可选链 `?.` 赋值导致的编译失败
+
 ## [0.2.8] - 2026-04-15
 
 ### Added

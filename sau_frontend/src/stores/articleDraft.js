@@ -11,7 +11,7 @@ export const useArticleDraftStore = defineStore('articleDraft', () => {
     imagePaths: []
   })
 
-  const selectedPlatforms = ref([5])
+  const selectedPlatforms = ref([])
   const platformSelectedAccounts = reactive({})  // { 5: [{...}], 7: [...] }
   const fileList = ref([])
 
@@ -22,7 +22,7 @@ export const useArticleDraftStore = defineStore('articleDraft', () => {
     form.tags = []
     form.location = ''
     form.imagePaths = []
-    selectedPlatforms.value = [5]
+    selectedPlatforms.value = []
     Object.keys(platformSelectedAccounts).forEach(k => delete platformSelectedAccounts[k])
     fileList.value = []
   }

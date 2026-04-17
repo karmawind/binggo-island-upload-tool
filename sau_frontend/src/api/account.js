@@ -25,5 +25,31 @@ export const accountApi = {
   // 删除账号
   deleteAccount(id) {
     return http.get(`/deleteAccount?id=${id}`)
+  },
+
+  // 获取运营者分组列表
+  getGroups() {
+    return http.get('/getGroups')
+  },
+
+  // 更新账号分组
+  updateGroup(data) {
+    return http.post('/updateAccountGroup', data)
+  },
+
+  // 更新帖子的账号选择
+  updatePostAccounts(data) {
+    return http.post('/updatePostAccounts', data)
+  },
+
+  // 运营者管理
+  addOperator(data) {
+    return http.post('/addOperator', data)
+  },
+  deleteOperator(data) {
+    return http.post('/deleteOperator', data)
+  },
+  renameOperator(data) {
+    return http.post('/renameOperator', data)
   }
 }

@@ -17,7 +17,11 @@
                 @clear="handleSearch"
                 @input="handleSearch"
               />
+              <el-select v-model="filterGroup" placeholder="运营者" clearable filterable style="width: 130px">
+                <el-option v-for="g in accountStore.groups" :key="g.id" :label="g.name" :value="g.name" />
+              </el-select>
               <div class="action-buttons">
+                <el-button plain @click="showOperatorDialog">运营者管理</el-button>
                 <el-button type="primary" @click="handleAddAccount">添加账号</el-button>
                 <el-button type="info" @click="fetchAccounts" :loading="false">
                   <el-icon :class="{ 'is-loading': appStore.isAccountRefreshing }"><Refresh /></el-icon>
@@ -57,6 +61,21 @@
                       </el-icon>
                       {{ scope.row.status }}
                     </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="运营者" width="140">
+                  <template #default="scope">
+                    <el-select
+                      v-model="scope.row.group"
+                      placeholder="未分组"
+                      clearable
+                      filterable
+                      size="small"
+                      style="width: 110px"
+                      @change="handleGroupChange(scope.row)"
+                    >
+                      <el-option v-for="g in accountStore.groups" :key="g.id" :label="g.name" :value="g.name" />
+                    </el-select>
                   </template>
                 </el-table-column>
                 <el-table-column label="操作" width="200">
@@ -739,11 +758,23 @@
           </el-select>
         </el-form-item>
         <el-form-item label="名称" prop="name">
-          <el-input 
-            v-model="accountForm.name" 
-            placeholder="请输入账号名称" 
+          <el-input
+            v-model="accountForm.name"
+            placeholder="请输入账号名称"
             :disabled="sseConnecting"
           />
+        </el-form-item>
+        <el-form-item label="运营者">
+          <el-select
+            v-model="accountForm.group"
+            placeholder="选择运营者"
+            clearable
+            filterable
+            style="width: 100%"
+            :disabled="sseConnecting"
+          >
+            <el-option v-for="g in accountStore.groups" :key="g.id" :label="g.name" :value="g.name" />
+          </el-select>
         </el-form-item>
         
         <!-- 二维码 / 登录引导显示区域 -->
@@ -792,6 +823,40 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 运营者管理弹窗 -->
+    <el-dialog v-model="operatorDialogVisible" title="运营者管理" width="450px">
+      <div class="operator-add">
+        <el-input v-model="newOperatorName" placeholder="输入运营者名称" style="flex: 1" @keyup.enter="addOperator" />
+        <el-button type="primary" @click="addOperator" :disabled="!newOperatorName.trim()">添加</el-button>
+      </div>
+      <el-table :data="accountStore.groups" style="width: 100%; margin-top: 16px" max-height="400">
+        <el-table-column prop="name" label="运营者名称" />
+        <el-table-column label="关联账号" width="100">
+          <template #default="scope">
+            {{ accountStore.accounts.filter(a => a.group === scope.row.name).length }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="140">
+          <template #default="scope">
+            <el-button size="small" @click="startRenameOperator(scope.row)">重命名</el-button>
+            <el-button size="small" type="danger" @click="deleteOperator(scope.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div v-if="!accountStore.groups.length" style="text-align: center; padding: 20px; color: #909399">
+        暂无运营者，请在上方输入名称添加
+      </div>
+    </el-dialog>
+
+    <!-- 重命名运营者弹窗 -->
+    <el-dialog v-model="renameDialogVisible" title="重命名运营者" width="350px">
+      <el-input v-model="renameNewName" placeholder="输入新名称" @keyup.enter="confirmRename" />
+      <template #footer>
+        <el-button @click="renameDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmRename">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -814,6 +879,79 @@ const activeTab = ref('all')
 
 // 搜索关键词
 const searchKeyword = ref('')
+// 运营者分组筛选
+const filterGroup = ref('')
+
+// 运营者管理
+const operatorDialogVisible = ref(false)
+const newOperatorName = ref('')
+const renameDialogVisible = ref(false)
+const renameNewName = ref('')
+const renamingOperator = ref(null)
+
+const showOperatorDialog = () => {
+  newOperatorName.value = ''
+  operatorDialogVisible.value = true
+}
+
+const addOperator = async () => {
+  const name = newOperatorName.value.trim()
+  if (!name) return
+  try {
+    const res = await accountApi.addOperator({ name })
+    if (res.code === 200) {
+      ElMessage.success(`运营者「${name}」已添加`)
+      newOperatorName.value = ''
+      await accountStore.fetchGroups()
+    } else {
+      ElMessage.error(res.msg || '添加失败')
+    }
+  } catch { ElMessage.error('添加失败') }
+}
+
+const deleteOperator = async (op) => {
+  const linkedCount = accountStore.accounts.filter(a => a.group === op.name).length
+  try {
+    const msg = linkedCount > 0
+      ? `运营者「${op.name}」关联了 ${linkedCount} 个账号，删除后这些账号将变为未分组。确认删除？`
+      : `确认删除运营者「${op.name}」？`
+    await ElMessageBox.confirm(msg, '删除运营者', { type: 'warning' })
+    const res = await accountApi.deleteOperator({ id: op.id, name: op.name })
+    if (res.code === 200) {
+      ElMessage.success('已删除')
+      await accountStore.fetchGroups()
+      fetchAccounts()
+    } else {
+      ElMessage.error(res.msg || '删除失败')
+    }
+  } catch { /* cancelled */ }
+}
+
+const startRenameOperator = (op) => {
+  renamingOperator.value = op
+  renameNewName.value = op.name
+  renameDialogVisible.value = true
+}
+
+const confirmRename = async () => {
+  const newName = renameNewName.value.trim()
+  if (!newName || !renamingOperator.value) return
+  try {
+    const res = await accountApi.renameOperator({
+      id: renamingOperator.value.id,
+      old_name: renamingOperator.value.name,
+      new_name: newName
+    })
+    if (res.code === 200) {
+      ElMessage.success('重命名成功')
+      renameDialogVisible.value = false
+      await accountStore.fetchGroups()
+      fetchAccounts()
+    } else {
+      ElMessage.error(res.msg || '重命名失败')
+    }
+  } catch { ElMessage.error('重命名失败') }
+}
 
 // 获取账号数据（快速，不验证）
 const fetchAccountsQuick = async () => {
@@ -879,6 +1017,9 @@ onMounted(() => {
   // 快速获取账号列表（不验证），立即显示
   fetchAccountsQuick()
 
+  // 获取运营者分组列表
+  accountStore.fetchGroups()
+
   // 在后台验证所有账号
   setTimeout(() => {
     validateAllAccountsInBackground()
@@ -928,11 +1069,27 @@ const handleStatusClick = (row) => {
 
 // 过滤后的账号列表
 const filteredAccounts = computed(() => {
-  if (!searchKeyword.value) return accountStore.accounts
-  return accountStore.accounts.filter(account =>
-    account.name.includes(searchKeyword.value)
-  )
+  let result = accountStore.accounts
+  if (searchKeyword.value) {
+    result = result.filter(account => account.name.includes(searchKeyword.value))
+  }
+  if (filterGroup.value) {
+    result = result.filter(account => account.group === filterGroup.value)
+  }
+  return result
 })
+
+// 更新账号分组
+const handleGroupChange = async (row) => {
+  try {
+    await accountApi.updateGroup({ id: row.id, group_name: row.group })
+    // 刷新分组列表（可能新增了运营者名称）
+    await accountStore.fetchGroups()
+    ElMessage.success('分组已更新')
+  } catch (error) {
+    ElMessage.error('分组更新失败')
+  }
+}
 
 // 按平台过滤的账号列表
 const filteredKuaishouAccounts = computed(() => {
@@ -990,6 +1147,7 @@ const accountForm = reactive({
   id: null,
   name: '',
   platform: '',
+  group: '',
   status: '正常'
 })
 
@@ -1012,6 +1170,7 @@ const handleAddAccount = () => {
     id: null,
     name: '',
     platform: '',
+    group: '',
     status: '正常'
   })
   // 重置SSE状态
@@ -1029,6 +1188,7 @@ const handleEdit = (row) => {
     id: row.id,
     name: row.name,
     platform: row.platform,
+    group: row.group || '',
     status: row.status
   })
   dialogVisible.value = true
@@ -1199,18 +1359,26 @@ const connectSSE = (platform, name) => {
 
   const type = platformTypeMap[platform] || '1'
 
-  // 图文平台（5-8）走新的 CLI 登录端点
+  // 图文平台（5-10）走新的 CLI 登录端点
   const isArticlePlatform = ['5', '6', '7', '8', '9', '10'].includes(type)
 
   // 创建SSE连接
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409'
   let url
   if (isArticlePlatform) {
-    // 图文平台：调用 CLI 登录
-    url = `${baseUrl}/loginArticleAccount?type=${type}&name=${encodeURIComponent(name)}`
+    // 图文平台：调用 CLI 登录，传递 group 参数
+    let articleUrl = `${baseUrl}/loginArticleAccount?type=${type}&name=${encodeURIComponent(name)}`
+    if (accountForm.group) {
+      articleUrl += `&group=${encodeURIComponent(accountForm.group)}`
+    }
+    url = articleUrl
   } else {
-    // 视频平台：原有 QR 码登录
-    url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}`
+    // 视频平台：原有 QR 码登录，传递 group 参数
+    let videoUrl = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}`
+    if (accountForm.group) {
+      videoUrl += `&group=${encodeURIComponent(accountForm.group)}`
+    }
+    url = videoUrl
   }
 
   eventSource = new EventSource(url)
@@ -1289,6 +1457,13 @@ const connectSSE = (platform, name) => {
 
             // 触发刷新操作
             fetchAccounts().then(() => {
+              // 如果添加账号时设置了运营者，保存到数据库
+              if (accountForm.group) {
+                const newAcc = accountStore.accounts.find(a => a.name === accountForm.name && a.platform === accountForm.platform)
+                if (newAcc) {
+                  accountApi.updateGroup({ id: newAcc.id, group_name: accountForm.group })
+                }
+              }
               // 刷新完成后关闭提示
               ElMessage.closeAll()
               ElMessage.success('账号信息已更新')
@@ -1349,11 +1524,16 @@ const submitAccountForm = () => {
             userName: accountForm.name
           })
           if (res.code === 200) {
+            // 同步更新运营者分组
+            if (accountForm.group) {
+              await accountApi.updateGroup({ id: accountForm.id, group_name: accountForm.group })
+            }
             // 更新状态管理中的账号
             const updatedAccount = {
               id: accountForm.id,
               name: accountForm.name,
               platform: accountForm.platform,
+              group: accountForm.group,
               status: accountForm.status // Keep the existing status
             };
             accountStore.updateAccount(accountForm.id, updatedAccount)
@@ -1361,6 +1541,7 @@ const submitAccountForm = () => {
             dialogVisible.value = false
             // 刷新账号列表
             fetchAccounts()
+            accountStore.fetchGroups()
           } else {
             ElMessage.error(res.msg || '更新账号失败')
           }
@@ -1546,5 +1727,10 @@ onBeforeUnmount(() => {
     max-height: none !important;
     overflow: visible !important;
   }
+}
+
+.operator-add {
+  display: flex;
+  gap: 8px;
 }
 </style>

@@ -136,8 +136,5 @@ echo   Backend:  http://localhost:5409
 echo   Frontend: http://localhost:5173
 echo ========================================
 echo.
-echo Opening browser...
-timeout /t 2 /nobreak >nul
-start http://localhost:5173
 echo.
 pause

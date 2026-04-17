@@ -92,9 +92,19 @@
 
     <!-- 账号选择对话框 -->
     <el-dialog v-model="showAccountDialog" :title="'选择 ' + platformNames[currentDialogPlatform] + ' 账号'" width="500px">
-      <el-table :data="dialogAccounts" @selection-change="handleAccountSelection" ref="accountTableRef">
+      <div style="margin-bottom: 12px">
+        <el-select v-model="dialogGroupFilter" placeholder="按运营者筛选" clearable filterable style="width: 100%">
+          <el-option v-for="g in accountGroups" :key="g.id" :label="g.name" :value="g.name" />
+        </el-select>
+      </div>
+      <el-table :data="filteredDialogAccounts" @selection-change="handleAccountSelection" ref="accountTableRef">
         <el-table-column type="selection" width="50" />
         <el-table-column prop="name" label="名称" />
+        <el-table-column label="运营者" width="100">
+          <template #default="scope">
+            <span style="color: #909399; font-size: 12px">{{ scope.row.group || '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态">
           <template #default="scope">
             <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'" effect="plain">{{ scope.row.status }}</el-tag>
@@ -181,6 +191,8 @@ const showAccountDialog = ref(false)
 const currentDialogPlatform = ref(5)
 const accountTableRef = ref(null)
 const tempSelectedAccounts = ref([])
+const dialogGroupFilter = ref('')
+const accountGroups = ref([])
 
 // 图片相关 — fileList 已通过 storeToRefs 解构
 const uploadUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409') + '/uploadImage'
@@ -202,6 +214,12 @@ const progressResults = ref([])
 // 对话框中显示的账号（按当前选中平台过滤）
 const dialogAccounts = computed(() => {
   return allAccounts.value.filter(acc => acc.type === currentDialogPlatform.value)
+})
+
+// 对话框中按运营者筛选后的账号
+const filteredDialogAccounts = computed(() => {
+  if (!dialogGroupFilter.value) return dialogAccounts.value
+  return dialogAccounts.value.filter(acc => acc.group === dialogGroupFilter.value)
 })
 
 // 素材库图片选择相关
@@ -284,7 +302,15 @@ const fetchAccounts = async () => {
         filePath: item[2],
         name: item[3],
         status: item[4] === 1 ? '正常' : '异常',
+        group: item[5] || '',
       }))
+      // 从 API 获取运营者列表
+      try {
+        const gRes = await accountApi.getGroups()
+        if (gRes.code === 200 && gRes.data) {
+          accountGroups.value = gRes.data
+        }
+      } catch { /* ignore */ }
     }
   } catch (error) {
     console.error('获取账号失败:', error)
@@ -341,6 +367,7 @@ onMounted(async () => {
 const openAccountDialog = (pType) => {
   currentDialogPlatform.value = pType
   tempSelectedAccounts.value = [...(platformSelectedAccounts[pType] || [])]
+  dialogGroupFilter.value = ''
   showAccountDialog.value = true
   // 设置表格已选中状态
   nextTick(() => {

@@ -538,6 +538,108 @@ def updateUserinfo():
             "data": None
         }), 500
 
+
+@app.route('/getGroups', methods=['GET'])
+def getGroups():
+    """获取所有运营者列表。"""
+    try:
+        with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, name FROM operators ORDER BY name")
+            rows = cursor.fetchall()
+            operators = [{"id": r[0], "name": r[1]} for r in rows]
+        return jsonify({"code": 200, "msg": None, "data": operators}), 200
+    except Exception as e:
+        return jsonify({"code": 500, "msg": str(e), "data": None}), 500
+
+
+@app.route('/addOperator', methods=['POST'])
+def addOperator():
+    """新增运营者。"""
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({"code": 400, "msg": "运营者名称不能为空", "data": None}), 400
+    try:
+        with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
+            conn.execute('INSERT INTO operators (name) VALUES (?)', (name,))
+        return jsonify({"code": 200, "msg": "添加成功", "data": None}), 200
+    except sqlite3.IntegrityError:
+        return jsonify({"code": 400, "msg": "该运营者已存在", "data": None}), 400
+    except Exception as e:
+        return jsonify({"code": 500, "msg": str(e), "data": None}), 500
+
+
+@app.route('/deleteOperator', methods=['POST'])
+def deleteOperator():
+    """删除运营者，并将关联账号的 group_name 清空。"""
+    data = request.get_json()
+    op_id = data.get('id')
+    name = data.get('name', '')
+    if not op_id:
+        return jsonify({"code": 400, "msg": "缺少运营者 ID", "data": None}), 400
+    try:
+        with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
+            conn.execute('DELETE FROM operators WHERE id=?', (op_id,))
+            # 关联账号的 group_name 清空
+            conn.execute("UPDATE user_info SET group_name='' WHERE group_name=?", (name,))
+        return jsonify({"code": 200, "msg": "删除成功", "data": None}), 200
+    except Exception as e:
+        return jsonify({"code": 500, "msg": str(e), "data": None}), 500
+
+
+@app.route('/renameOperator', methods=['POST'])
+def renameOperator():
+    """重命名运营者，同步更新关联账号的 group_name。"""
+    data = request.get_json()
+    op_id = data.get('id')
+    old_name = data.get('old_name', '')
+    new_name = data.get('new_name', '').strip()
+    if not op_id or not new_name:
+        return jsonify({"code": 400, "msg": "参数不完整", "data": None}), 400
+    try:
+        with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
+            conn.execute('UPDATE operators SET name=? WHERE id=?', (new_name, op_id))
+            conn.execute('UPDATE user_info SET group_name=? WHERE group_name=?', (new_name, old_name))
+        return jsonify({"code": 200, "msg": "重命名成功", "data": None}), 200
+    except sqlite3.IntegrityError:
+        return jsonify({"code": 400, "msg": "该名称已存在", "data": None}), 400
+    except Exception as e:
+        return jsonify({"code": 500, "msg": str(e), "data": None}), 500
+
+
+@app.route('/updateAccountGroup', methods=['POST'])
+def updateAccountGroup():
+    """更新账号的运营者分组。"""
+    data = request.get_json()
+    account_id = data.get('id')
+    group_name = data.get('group_name', '')
+    if not account_id:
+        return jsonify({"code": 400, "msg": "缺少账号 ID", "data": None}), 400
+    try:
+        with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
+            conn.execute('UPDATE user_info SET group_name=? WHERE id=?', (group_name, account_id))
+        return jsonify({"code": 200, "msg": "分组更新成功", "data": None}), 200
+    except Exception as e:
+        return jsonify({"code": 500, "msg": str(e), "data": None}), 500
+
+
+@app.route('/updatePostAccounts', methods=['POST'])
+def updatePostAccounts():
+    """更新帖子的账号选择。data: { id, selected_accounts: '{"5":[1,2]}' }"""
+    data = request.get_json()
+    post_id = data.get('id')
+    selected_accounts = data.get('selected_accounts', '')
+    if not post_id:
+        return jsonify({"code": 400, "msg": "缺少帖子 ID", "data": None}), 400
+    try:
+        with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
+            conn.execute('UPDATE article_posts SET selected_accounts=? WHERE id=?', (selected_accounts, post_id))
+        return jsonify({"code": 200, "msg": "账号选择已保存", "data": None}), 200
+    except Exception as e:
+        return jsonify({"code": 500, "msg": str(e), "data": None}), 500
+
+
 @app.route('/postVideoBatch', methods=['POST'])
 def postVideoBatch():
     data_list = request.get_json()
@@ -1079,8 +1181,9 @@ ARTICLE_CLI_PLATFORMS = {5: 'baijiahao', 6: 'smzdm', 7: 'toutiao', 8: 'ctrip', 9
 @app.route('/loginArticleAccount')
 def login_article_account():
     """SSE 端点：调用 CLI 登录图文平台，自动创建账号并上传 cookie。"""
-    platform_type = request.args.get('type')  # 5/6/7/8
+    platform_type = request.args.get('type')  # 5/6/7/8/9/10
     account_name = request.args.get('name')
+    group_name = request.args.get('group', '')
 
     if not platform_type or not account_name:
         return jsonify({"code": 400, "msg": "缺少参数"}), 400
@@ -1098,7 +1201,7 @@ def login_article_account():
 
     thread = threading.Thread(
         target=_run_cli_login,
-        args=(cli_name, account_name, int(platform_type), status_queue),
+        args=(cli_name, account_name, int(platform_type), status_queue, group_name),
         daemon=True
     )
     thread.start()
@@ -1111,7 +1214,7 @@ def login_article_account():
     return response
 
 
-def _run_cli_login(cli_name, account_name, platform_type, status_queue):
+def _run_cli_login(cli_name, account_name, platform_type, status_queue, group_name=''):
     """在线程中运行 CLI 登录命令，完成后自动创建账号并复制 cookie。"""
     import sys
 
@@ -1187,8 +1290,8 @@ def _run_cli_login(cli_name, account_name, platform_type, status_queue):
                 shutil.copy2(str(cookie_src), str(cookie_dst))
                 with sqlite3.connect(Path(BASE_DIR) / "db" / "database.db") as conn:
                     conn.execute(
-                        'INSERT INTO user_info (type, filePath, userName, status) VALUES (?, ?, ?, 1)',
-                        (platform_type, cookie_uuid, account_name)
+                        'INSERT INTO user_info (type, filePath, userName, status, group_name) VALUES (?, ?, ?, 1, ?)',
+                        (platform_type, cookie_uuid, account_name, group_name)
                     )
                 status_queue.put("[成功] 登录成功，账号已自动创建！")
 
@@ -1271,14 +1374,31 @@ def _article_scheduler():
 
                 # 构建 platform_accounts
                 pa = {}
+                # 优先使用 selected_accounts（帖子绑定的账号）
+                selected_accounts = json.loads(post.get('selected_accounts') or '{}')
                 for pt in platforms:
-                    # 查找该平台所有有效账号
-                    with sqlite3.connect(Path(BASE_DIR) / "db" / "database.db") as conn:
-                        cursor2 = conn.cursor()
-                        cursor2.execute("SELECT filePath FROM user_info WHERE type=? AND status=1", (pt,))
-                        rows = cursor2.fetchall()
-                        if rows:
-                            pa[pt] = [r[0] for r in rows]
+                    pt_str = str(pt)
+                    if pt_str in selected_accounts and selected_accounts[pt_str]:
+                        # 用帖子绑定的账号 ID 查 filePath
+                        acc_ids = selected_accounts[pt_str]
+                        placeholders = ','.join('?' for _ in acc_ids)
+                        with sqlite3.connect(Path(BASE_DIR) / "db" / "database.db") as conn:
+                            cursor2 = conn.cursor()
+                            cursor2.execute(
+                                f"SELECT filePath FROM user_info WHERE id IN ({placeholders}) AND status=1",
+                                acc_ids
+                            )
+                            rows = cursor2.fetchall()
+                            if rows:
+                                pa[pt] = [r[0] for r in rows]
+                    else:
+                        # 兜底：查找该平台所有有效账号
+                        with sqlite3.connect(Path(BASE_DIR) / "db" / "database.db") as conn:
+                            cursor2 = conn.cursor()
+                            cursor2.execute("SELECT filePath FROM user_info WHERE type=? AND status=1", (pt,))
+                            rows = cursor2.fetchall()
+                            if rows:
+                                pa[pt] = [r[0] for r in rows]
 
                 if not pa:
                     article_tasks[logger_key]['status'] = 'completed'
@@ -1367,7 +1487,7 @@ def downloadArticleTemplate():
     writer.writerow(['5,7', '今日推荐好物', '今天给大家推荐一款超好用的产品...', '', 'C:/images/pic1.png,C:/images/pic2.png', '好物推荐,种草', ''])
     writer.writerow(['8', '杭州三日游攻略', 'Day1 西湖十景...', '', 'C:/images/hangzhou1.png', '旅游,攻略', '杭州'])
     writer.writerow([])
-    writer.writerow(['1=小红书  2=视频号  3=抖音  4=快手  5=百家号  6=什么值得买  7=头条号  8=携程  9=搜狐号', '必填', '图文内容(视频平台可留空)', '视频文件路径(图文平台可留空)', '图片路径(多张用逗号隔开)', '逗号隔开', '仅携程必填'])
+    writer.writerow(['1=小红书  2=视频号  3=抖音  4=快手  5=百家号  6=什么值得买  7=头条号  8=携程  9=搜狐号  10=微博', '必填', '图文内容(视频平台可留空)', '视频文件路径(图文平台可留空)', '图片路径(多张用逗号隔开)', '逗号隔开', '仅携程必填'])
 
     csv_bytes = csv_content.getvalue().encode('utf-8-sig')
     return send_file(

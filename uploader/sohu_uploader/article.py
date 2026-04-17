@@ -261,67 +261,99 @@ class EditorPage:
         await self._screenshot("05_images_uploaded")
         sohu_logger.success(f"[图片] {len(valid_images)} 张图片已上传")
 
-    async def publish(self):
-        """点击发布按钮。搜狐号发布需要多步确认。"""
-        sohu_logger.info("[发布] 点击发布按钮...")
-
-        await self.dismiss_popups()
-
-        # 第一步：点击"发布"按钮（是 <li> 元素）
+    async def _click_publish_btn(self):
+        """点击发布按钮（<li> 元素，需要 JS 兜底）。"""
         publish_btn = self.page.locator(SELECTORS["publish_btn"]).first
         try:
             await publish_btn.click(timeout=TIMEOUTS["click"])
         except Exception:
-            sohu_logger.warning("[发布] li 元素点击失败，尝试 JS 点击...")
             await self.page.evaluate("""() => {
                 const btn = document.querySelector('li.positive-button.publish-report-btn');
                 if (btn) btn.click();
             }""")
 
-        await asyncio.sleep(2)
-
-        # 处理可能的"正文不足200字"警告弹窗
+    async def _click_visible_button(self, text: str):
+        """点击页面上可见的指定文字按钮（多层兜底）。"""
+        # 方法1: Playwright text locator
         try:
-            warn_text = self.page.locator("text=不足200字").first
-            if await warn_text.is_visible():
-                sohu_logger.info("[发布] 检测到'正文不足200字'警告，点击确定继续发布...")
-                warn_btn = self.page.locator("button:has-text('确定')").first
-                if await warn_btn.is_visible():
-                    await warn_btn.click()
-                else:
-                    await self.page.evaluate("""() => {
-                        const btns = document.querySelectorAll('button');
-                        for (const btn of btns) {
-                            if (btn.innerText.trim() === '确定') {
-                                btn.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
-                                break;
-                            }
-                        }
-                    }""")
-                await asyncio.sleep(2)
+            btn = self.page.locator(f"text={text}").first
+            if await btn.is_visible():
+                await btn.click()
+                sohu_logger.debug(f"[点击] Playwright 点击 '{text}'")
+                return True
         except Exception:
             pass
 
-        # 处理"确认发布文章么？"弹窗，点击"确定"
+        # 方法2: CSS button selector
         try:
-            confirm_dialog = self.page.locator("text=确认发布文章么").first
-            if await confirm_dialog.is_visible():
-                sohu_logger.info("[发布] 检测到确认弹窗，点击确定...")
-                confirm_btn = self.page.locator("button:has-text('确定')").first
-                if await confirm_btn.is_visible():
-                    await confirm_btn.click()
-                else:
-                    await self.page.evaluate("""() => {
-                        const btns = document.querySelectorAll('button');
-                        for (const btn of btns) {
-                            if (btn.innerText.trim() === '确定') {
-                                btn.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
-                                break;
-                            }
-                        }
-                    }""")
-        except Exception as e:
-            sohu_logger.warning(f"[发布] 确认弹窗处理异常: {e}")
+            btn = self.page.locator(f"button:has-text('{text}')").first
+            if await btn.is_visible():
+                await btn.click()
+                sohu_logger.debug(f"[点击] CSS button 点击 '{text}'")
+                return True
+        except Exception:
+            pass
+
+        # 方法3: JS dispatchEvent（遍历所有元素）
+        clicked = await self.page.evaluate("""(text) => {
+            const all = document.querySelectorAll('button, a, span, div[role="button"], li');
+            for (const el of all) {
+                if (el.innerText?.trim() === text && el.offsetParent !== null) {
+                    el.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, cancelable: true}));
+                    el.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, cancelable: true}));
+                    el.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                    return true;
+                }
+            }
+            return false;
+        }""", text)
+        if clicked:
+            sohu_logger.debug(f"[点击] JS dispatchEvent 点击 '{text}'")
+        return clicked
+
+    async def publish(self):
+        """点击发布按钮。搜狐号发布需要多步确认。"""
+        sohu_logger.info("[发布] 点击发布按钮...")
+
+        await self.dismiss_popups()
+        await self._click_publish_btn()
+        await asyncio.sleep(2)
+
+        # 循环处理所有弹窗（200字警告 / 确认发布），最多 5 轮
+        for attempt in range(5):
+            # 检查是否已跳转（发布成功）
+            if "addarticle" not in self.page.url:
+                sohu_logger.info("[发布] 页面已跳转，发布成功")
+                return
+
+            # 检测"正文不足200字"警告
+            try:
+                warn = self.page.locator("text=不足200字").first
+                if await warn.is_visible():
+                    sohu_logger.info(f"[发布] 第{attempt + 1}轮：检测到'不足200字'警告")
+                    await self._click_visible_button("确定")
+                    await asyncio.sleep(2)
+                    await self._click_publish_btn()
+                    await asyncio.sleep(2)
+                    continue
+            except Exception:
+                pass
+
+            # 检测"确认发布文章么？"弹窗
+            try:
+                confirm = self.page.locator("text=确认发布文章么").first
+                if await confirm.is_visible():
+                    sohu_logger.info(f"[发布] 第{attempt + 1}轮：检测到确认弹窗")
+                    await self._click_visible_button("确定")
+                    await asyncio.sleep(3)
+                    continue
+            except Exception:
+                pass
+
+            # 没有弹窗，等待一下再检查
+            await asyncio.sleep(2)
+
+        await self._screenshot("06_after_publish")
 
         await asyncio.sleep(3)
         await self._screenshot("06_after_publish")
@@ -330,7 +362,7 @@ class EditorPage:
         """验证发布是否成功。"""
         sohu_logger.info("[验证] 验证发布结果...")
 
-        success_keywords = ["发布成功", "提交成功", "审核", "已发布"]
+        success_keywords = ["发布成功", "提交成功", "审核", "已发布", "审核中"]
         error_keywords = ["发布失败", "请填写", "不能为空"]
 
         for attempt in range(10):
@@ -338,6 +370,10 @@ class EditorPage:
             body_text = await self.page.evaluate(
                 "() => document.body.innerText.substring(0, 2000)"
             )
+
+            if attempt == 0:
+                sohu_logger.debug(f"[验证] URL={url[:80]}")
+                sohu_logger.debug(f"[验证] 页面文本前200字: {body_text[:200]}")
 
             # 检测成功关键词
             for kw in success_keywords:

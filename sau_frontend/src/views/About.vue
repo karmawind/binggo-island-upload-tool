@@ -3,7 +3,7 @@
     <el-card class="about-card">
       <div class="about-header">
         <h1>灵感岛推文分发器</h1>
-        <p class="version">v0.3.0</p>
+        <p class="version">v0.3.1</p>
       </div>
 
       <el-divider />
@@ -51,6 +51,40 @@
           <li>发布任务进度实时跟踪</li>
           <li>Cookie 导入导出与自动校验</li>
           <li>CLI 命令行接口（支持 10 平台登录、校验、发布）</li>
+        </ul>
+      </div>
+
+      <div class="about-section">
+        <h3>发布须知</h3>
+        <ul class="notice-list">
+          <li class="notice-item">
+            <el-tag type="danger" size="small" effect="dark">重要</el-tag>
+            <span><strong>百家号发布需要图片</strong> — 百家号要求至少上传一张图片才能选择封面并发布，无图片的帖子会发布失败。CSV 导入时请务必填写"图片"列</span>
+          </li>
+          <li class="notice-item">
+            <el-tag type="danger" size="small" effect="dark">重要</el-tag>
+            <span><strong>百家号同账号间隔 3 分钟</strong> — 同一百家号账号连续发布会触发"操作过于频繁"，系统已自动处理（间隔 180 秒），排期时也建议间隔 3 分钟以上</span>
+          </li>
+          <li class="notice-item">
+            <el-tag type="danger" size="small" effect="dark">重要</el-tag>
+            <span><strong>微博无标题，需写正文</strong> — 微博是短文本平台，没有标题字段。CSV 导入时微博行标题留空，内容必须写在"正文"列</span>
+          </li>
+          <li class="notice-item">
+            <el-tag type="warning" size="small" effect="dark">注意</el-tag>
+            <span><strong>携程发布需填写地点</strong> — 携程游记要求至少一个地点，CSV"地点"列填写城市名即可（如"杭州"）</span>
+          </li>
+          <li class="notice-item">
+            <el-tag type="warning" size="small" effect="dark">注意</el-tag>
+            <span><strong>搜狐号使用真实 Chrome</strong> — 搜狐号通过 CDP 连接本地 Chrome 发帖（非模拟浏览器），系统会自动启动调试模式 Chrome，请确保已安装 Chrome 浏览器</span>
+          </li>
+          <li class="notice-item">
+            <el-tag type="info" size="small" effect="dark">提示</el-tag>
+            <span><strong>图文平台封面自动选取</strong> — 百家号、头条号、搜狐号的封面图均自动从正文配图中选取，无需单独上传封面</span>
+          </li>
+          <li class="notice-item">
+            <el-tag type="info" size="small" effect="dark">提示</el-tag>
+            <span><strong>Cookie 有效期</strong> — 各平台 Cookie 会过期，建议定期在账号管理页检查账号状态（状态图标变灰表示需要重新登录）</span>
+          </li>
         </ul>
       </div>
 
@@ -133,6 +167,26 @@
         padding-left: 20px;
         color: $text-secondary;
         line-height: 2;
+      }
+
+      .notice-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+
+        .notice-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          margin-bottom: 12px;
+          color: $text-secondary;
+          line-height: 1.8;
+
+          .el-tag {
+            flex-shrink: 0;
+            margin-top: 2px;
+          }
+        }
       }
     }
   }

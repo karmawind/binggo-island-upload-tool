@@ -42,11 +42,18 @@ def _run_in_thread(coro):
 
 def post_article_baijiahao(title, content, image_paths, tags, account_files,
                            publish_date=0, callback=None):
-    """发布百家号图文文章。"""
+    """发布百家号图文文章。同一账号连续发布间隔 3 分钟，避免触发频率限制。"""
+    import time as _time
     cookie_paths = [str(Path(BASE_DIR / "cookiesFile" / f)) for f in account_files]
     img_paths = _resolve_image_paths(image_paths)
+    last_account = None
 
     for cookie_path in cookie_paths:
+        # 同一账号连续发布时等待 3 分钟
+        if last_account and cookie_path == last_account:
+            logger.info("百家号: 同一账号连续发布，等待 3 分钟避免频率限制...")
+            _time.sleep(180)
+
         logger.info(f"百家号发布: title={title}, account={cookie_path}")
 
         async def _do():
@@ -65,6 +72,7 @@ def post_article_baijiahao(title, content, image_paths, tags, account_files,
         if callback:
             callback('baijiahao', cookie_path, success)
         logger.info(f"百家号发布结果: {success}")
+        last_account = cookie_path
 
 
 def post_article_smzdm(title, content, image_paths, tags, account_files,

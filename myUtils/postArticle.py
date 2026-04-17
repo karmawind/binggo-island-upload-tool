@@ -18,6 +18,18 @@ from uploader.weibo_uploader.article import WeiboArticle
 logger = logging.getLogger(__name__)
 
 
+def _resolve_image_paths(image_paths: list[str]) -> list[str]:
+    """将图片路径列表解析为绝对路径。兼容相对文件名和绝对路径。"""
+    result = []
+    for img in image_paths:
+        p = Path(img)
+        if p.is_absolute():
+            result.append(str(p))
+        else:
+            result.append(str(Path(BASE_DIR / "imageFile" / img)))
+    return result
+
+
 def _run_in_thread(coro):
     """在新事件循环中运行协程（用于在后台线程中执行）。"""
     loop = asyncio.new_event_loop()
@@ -32,7 +44,7 @@ def post_article_baijiahao(title, content, image_paths, tags, account_files,
                            publish_date=0, callback=None):
     """发布百家号图文文章。"""
     cookie_paths = [str(Path(BASE_DIR / "cookiesFile" / f)) for f in account_files]
-    img_paths = [str(Path(BASE_DIR / "imageFile" / img)) for img in image_paths]
+    img_paths = _resolve_image_paths(image_paths)
 
     for cookie_path in cookie_paths:
         logger.info(f"百家号发布: title={title}, account={cookie_path}")
@@ -59,7 +71,7 @@ def post_article_smzdm(title, content, image_paths, tags, account_files,
                        callback=None):
     """发布什么值得买图文文章。"""
     cookie_paths = [str(Path(BASE_DIR / "cookiesFile" / f)) for f in account_files]
-    img_paths = [str(Path(BASE_DIR / "imageFile" / img)) for img in image_paths]
+    img_paths = _resolve_image_paths(image_paths)
 
     for cookie_path in cookie_paths:
         logger.info(f"什么值得买发布: title={title}, account={cookie_path}")
@@ -85,7 +97,7 @@ def post_article_toutiao(title, content, image_paths, tags, account_files,
                          callback=None):
     """发布头条号图文文章。"""
     cookie_paths = [str(Path(BASE_DIR / "cookiesFile" / f)) for f in account_files]
-    img_paths = [str(Path(BASE_DIR / "imageFile" / img)) for img in image_paths]
+    img_paths = _resolve_image_paths(image_paths)
 
     for cookie_path in cookie_paths:
         logger.info(f"头条号发布: title={title}, account={cookie_path}")
@@ -111,7 +123,7 @@ def post_article_ctrip(title, content, image_paths, tags, account_files,
                        location="", callback=None):
     """发布携程图文笔记。"""
     cookie_paths = [str(Path(BASE_DIR / "cookiesFile" / f)) for f in account_files]
-    img_paths = [str(Path(BASE_DIR / "imageFile" / img)) for img in image_paths]
+    img_paths = _resolve_image_paths(image_paths)
 
     for cookie_path in cookie_paths:
         logger.info(f"携程发布: title={title}, account={cookie_path}")
@@ -138,7 +150,7 @@ def post_article_sohu(title, content, image_paths, tags, account_files,
                       callback=None):
     """发布搜狐号图文文章。"""
     cookie_paths = [str(Path(BASE_DIR / "cookiesFile" / f)) for f in account_files]
-    img_paths = [str(Path(BASE_DIR / "imageFile" / img)) for img in image_paths]
+    img_paths = _resolve_image_paths(image_paths)
 
     for cookie_path in cookie_paths:
         logger.info(f"搜狐号发布: title={title}, account={cookie_path}")
@@ -164,7 +176,7 @@ def post_article_weibo(title, content, image_paths, tags, account_files,
                       callback=None):
     """发布微博图文。"""
     cookie_paths = [str(Path(BASE_DIR / "cookiesFile" / f)) for f in account_files]
-    img_paths = [str(Path(BASE_DIR / "imageFile" / img)) for img in image_paths]
+    img_paths = _resolve_image_paths(image_paths)
     # 微博最多 9 张图片
     img_paths = img_paths[:9]
 

@@ -129,7 +129,7 @@
           <el-date-picker v-model="scheduleForm.startTime" type="datetime" placeholder="选择开始时间" format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm" />
         </el-form-item>
         <el-form-item label="发布间隔">
-          <el-input-number v-model="scheduleForm.interval" :min="10" :step="30" />
+          <el-input-number v-model="scheduleForm.interval" :min="1" :step="5" />
           <span style="margin-left: 8px">分钟</span>
         </el-form-item>
         <p style="color: #909399; font-size: 13px; margin-left: 100px">

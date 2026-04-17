@@ -1358,6 +1358,12 @@ def _article_scheduler():
 
             for post in posts:
                 post = dict(post)
+
+                # 立即标记为 publishing，防止 60 秒后重复拾取
+                with sqlite3.connect(Path(BASE_DIR) / "db" / "database.db") as conn:
+                    conn.execute("UPDATE article_posts SET status='publishing' WHERE id=?", (post['id'],))
+                    conn.commit()
+
                 logger_key = f"schedule_{post['id']}"
                 article_tasks[logger_key] = {
                     'status': 'running', 'total': 0, 'completed': 0, 'results': [], 'error': None
@@ -1369,8 +1375,17 @@ def _article_scheduler():
                     p = post.get('platform', 0)
                     platforms = [p] if p else []
 
-                image_list = json.loads(post.get('image_paths') or '[]')
-                tags = json.loads(post.get('tags') or '[]')
+                # 兼容 CSV 导入的原始字符串格式
+                raw_images = post.get('image_paths') or '[]'
+                try:
+                    image_list = json.loads(raw_images)
+                except (json.JSONDecodeError, TypeError):
+                    image_list = [p.strip() for p in raw_images.replace('，', ',').split(',') if p.strip()]
+                raw_tags = post.get('tags') or '[]'
+                try:
+                    tags = json.loads(raw_tags)
+                except (json.JSONDecodeError, TypeError):
+                    tags = [t.strip() for t in raw_tags.replace('，', ',').split(',') if t.strip()]
 
                 # 构建 platform_accounts
                 pa = {}
@@ -1480,14 +1495,11 @@ def downloadArticleTemplate():
     csv_content = io.StringIO()
     writer = csv_mod.writer(csv_content)
     writer.writerow(['平台', '标题', '正文', '视频', '图片', '标签', '地点'])
-    writer.writerow([])
-    writer.writerow(['--- 删除此行及上方行，在下方填写你的内容 ---', '', '', '', '', '', ''])
-    writer.writerow([])
-    writer.writerow(['3', '探店vlog', '', 'C:/videos/shop.mp4', '', '探店,美食', ''])
-    writer.writerow(['5,7', '今日推荐好物', '今天给大家推荐一款超好用的产品...', '', 'C:/images/pic1.png,C:/images/pic2.png', '好物推荐,种草', ''])
-    writer.writerow(['8', '杭州三日游攻略', 'Day1 西湖十景...', '', 'C:/images/hangzhou1.png', '旅游,攻略', '杭州'])
-    writer.writerow([])
-    writer.writerow(['1=小红书  2=视频号  3=抖音  4=快手  5=百家号  6=什么值得买  7=头条号  8=携程  9=搜狐号  10=微博', '必填', '图文内容(视频平台可留空)', '视频文件路径(图文平台可留空)', '图片路径(多张用逗号隔开)', '逗号隔开', '仅携程必填'])
+    writer.writerow([])  # 空行，留给用户填写
+    writer.writerow(['5', '今日推荐好物', '今天给大家推荐一款超好用的产品，值得入手！', '', 'C:/images/pic1.png,C:/images/pic2.png', '好物推荐,种草', ''])
+    writer.writerow(['5,7', '春季穿搭分享', '分享一下今年春天的穿搭心得...', '', 'C:/images/outfit1.png', '穿搭,春季', ''])
+    writer.writerow(['10', '', '今天天气真好，分享一张风景图~', '', 'C:/images/view.png', '', ''])
+    writer.writerow(['1=小红书  2=视频号  3=抖音  4=快手  5=百家号  6=什么值得买  7=头条号  8=携程  9=搜狐号  10=微博', '微博留空', '图文内容(视频平台可留空)', '视频文件路径(图文平台可留空)', '图片路径(多张用逗号隔开)', '逗号隔开', '仅携程必填'])
 
     csv_bytes = csv_content.getvalue().encode('utf-8-sig')
     return send_file(

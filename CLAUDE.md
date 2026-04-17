@@ -555,3 +555,5 @@ sau skill install
 **所有平台的自动化测试必须从空白/干净的编辑器状态开始，绝不延续上一次测试的编辑状态。** 残留的标题、正文、图片、遮罩面板、弹窗等 DOM 元素会导致后续所有操作出现不可预见的情况（按钮被遮挡、内容重复、选择器匹配错误、上传面板异常等）。每次发布/测试前必须有清空编辑器的步骤。
 
 **使用 Chrome MCP（CDP `connect_over_cdp`）方式发帖时，Cookie 必须从账号管理的 cookie 文件注入，不能依赖浏览器自身的登录态。** CDP 连接的 Chrome 可能是独立 profile（无登录态），必须通过 `context.add_cookies()` 将 `cookies/<platform>_<account>.json` 中对应域名的 cookie 注入到 context。这样做既保留了 CDP 的反爬能力，又让账号管理系统（login → check → upload）完整闭环。参考 `uploader/sohu_uploader/article.py` 中的 cookie 注入实现。
+
+**搜狐号必须使用 CDP（`connect_over_cdp`）方式发帖，禁止改为 patchright `chromium.launch()` 方式。** 不得建议或实施任何将搜狐号从 CDP 迁移到 `chromium.launch()` 的方案。搜狐号的反爬策略需要真实 Chrome 浏览器环境，CDP 是唯一可行方案。

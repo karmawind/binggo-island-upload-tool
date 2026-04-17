@@ -262,7 +262,7 @@ class EditorPage:
         sohu_logger.success(f"[图片] {len(valid_images)} 张图片已上传")
 
     async def publish(self):
-        """点击发布按钮。搜狐号发布需要两步确认。"""
+        """点击发布按钮。搜狐号发布需要多步确认。"""
         sohu_logger.info("[发布] 点击发布按钮...")
 
         await self.dismiss_popups()
@@ -280,17 +280,37 @@ class EditorPage:
 
         await asyncio.sleep(2)
 
-        # 第二步：处理"确认发布文章么？"弹窗，点击"确定"
+        # 处理可能的"正文不足200字"警告弹窗
+        try:
+            warn_text = self.page.locator("text=不足200字").first
+            if await warn_text.is_visible():
+                sohu_logger.info("[发布] 检测到'正文不足200字'警告，点击确定继续发布...")
+                warn_btn = self.page.locator("button:has-text('确定')").first
+                if await warn_btn.is_visible():
+                    await warn_btn.click()
+                else:
+                    await self.page.evaluate("""() => {
+                        const btns = document.querySelectorAll('button');
+                        for (const btn of btns) {
+                            if (btn.innerText.trim() === '确定') {
+                                btn.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                                break;
+                            }
+                        }
+                    }""")
+                await asyncio.sleep(2)
+        except Exception:
+            pass
+
+        # 处理"确认发布文章么？"弹窗，点击"确定"
         try:
             confirm_dialog = self.page.locator("text=确认发布文章么").first
             if await confirm_dialog.is_visible():
                 sohu_logger.info("[发布] 检测到确认弹窗，点击确定...")
-                # 弹窗中的"确定"按钮
                 confirm_btn = self.page.locator("button:has-text('确定')").first
                 if await confirm_btn.is_visible():
                     await confirm_btn.click()
                 else:
-                    # 用 JS dispatchEvent 兜底
                     await self.page.evaluate("""() => {
                         const btns = document.querySelectorAll('button');
                         for (const btn of btns) {
@@ -386,6 +406,40 @@ class SohuArticle:
         sohu_logger.info(f"{'=' * 20} 开始发布: {self.title} {'=' * 20}")
 
         try:
+            # 检查 CDP 是否可用，不可用则自动启动 Chrome 调试模式
+            import subprocess
+            import urllib.request
+
+            cdp_url = "http://127.0.0.1:9222/json/version"
+            try:
+                urllib.request.urlopen(cdp_url, timeout=3)
+                sohu_logger.info("[CDP] 检测到 Chrome 调试模式已启动")
+            except Exception:
+                sohu_logger.info("[CDP] Chrome 调试模式未启动，正在自动启动...")
+                chrome_path = LOCAL_CHROME_PATH or r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+                user_data_dir = str(Path(__file__).resolve().parent.parent.parent / "chrome_debug_profile")
+
+                # 尝试启动（如果已有 Chrome 在运行，用独立 user-data-dir 可以共存）
+                subprocess.Popen([
+                    chrome_path,
+                    f"--remote-debugging-port=9222",
+                    f"--user-data-dir={user_data_dir}",
+                ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                # 等待 Chrome 启动并就绪
+                started = False
+                for i in range(15):
+                    await asyncio.sleep(1)
+                    try:
+                        urllib.request.urlopen(cdp_url, timeout=2)
+                        started = True
+                        break
+                    except Exception:
+                        continue
+                if started:
+                    sohu_logger.info("[CDP] Chrome 调试模式已自动启动")
+                else:
+                    raise Exception("Chrome 调试模式自动启动失败，请检查 Chrome 是否已安装")
+
             # 通过 CDP 连接本地 Chrome（绕过反爬检测）
             sohu_logger.info("[启动] 通过 CDP 连接本地 Chrome...")
             self._browser = await playwright.chromium.connect_over_cdp(

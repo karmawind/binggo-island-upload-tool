@@ -134,6 +134,9 @@ echo ========================================
 echo   All services started!
 echo   Backend:  http://localhost:5409
 echo   Frontend: http://localhost:5173
+echo.
+echo   NOTE: Sohu publishing requires Chrome debug mode.
+echo   Run start_chrome_debug.bat before posting to Sohu.
 echo ========================================
 echo.
 echo.

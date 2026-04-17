@@ -42,6 +42,10 @@ All notable changes to `social-auto-upload` will be documented in this file.
 - **绝对路径图片无法发布** — 各平台发布函数把图片路径统一拼 `imageFile/` 前缀，但 CSV 导入的本地绝对路径（如 `C:\Users\...\pic.png`）拼接后路径错误。新增 `_resolve_image_paths()` 辅助函数，自动区分绝对路径和相对路径
 - **CSV 模板优化** — 去掉多余的空行和提示行，新增微博示例（标题留空），标题列说明标注"微博留空"
 - **排期间隔最小值** — 发布间隔从 10 分钟改为 1 分钟，步进 5 分钟
+- **搜狐号 CDP 自动启动** — 搜狐发帖前自动检测 Chrome 调试模式（端口 9222），未启动则自动以 `--remote-debugging-port=9222` + 独立 profile 启动 Chrome，无需手动操作
+- **搜狐号"不足200字"弹窗** — 发布时自动检测并确认"正文不足200字"警告弹窗，不再卡住
+- **搜狐号铁律** — CLAUDE.md 新增铁律：搜狐号必须使用 CDP 方式，禁止改为 `chromium.launch()`
+- **新增 `start_chrome_debug.bat`** — 备用脚本，手动启动 Chrome 调试模式
 
 ## [0.2.8] - 2026-04-15
 

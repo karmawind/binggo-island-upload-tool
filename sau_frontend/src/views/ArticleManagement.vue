@@ -123,7 +123,7 @@
     </el-dialog>
 
     <!-- 排期对话框 -->
-    <el-dialog v-model="scheduleDialogVisible" title="排期发布" width="450px">
+    <el-dialog v-model="scheduleDialogVisible" title="排期发布" width="600px">
       <el-form label-width="100px">
         <el-form-item label="起始时间">
           <el-date-picker v-model="scheduleForm.startTime" type="datetime" placeholder="选择开始时间" format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm" />
@@ -131,6 +131,21 @@
         <el-form-item label="发布间隔">
           <el-input-number v-model="scheduleForm.interval" :min="1" :step="5" />
           <span style="margin-left: 8px">分钟</span>
+        </el-form-item>
+        <el-form-item label="发布账号" v-if="schedulePlatforms.length">
+          <div style="width: 100%">
+            <div v-for="pt in schedulePlatforms" :key="pt" class="batch-platform-row" style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px">
+              <el-tag effect="plain" style="min-width: 80px">{{ formatPlatformId(pt) }}</el-tag>
+              <el-select v-model="scheduleAccountMap[pt]" multiple placeholder="选择账号（不选则用全部账号）" style="flex: 1">
+                <el-option
+                  v-for="acc in getAccountsForPlatform(pt)"
+                  :key="acc.id"
+                  :label="(acc.group ? `[${acc.group}] ` : '') + acc.name"
+                  :value="acc.id"
+                />
+              </el-select>
+            </div>
+          </div>
         </el-form-item>
         <p style="color: #909399; font-size: 13px; margin-left: 100px">
           {{ selectedPosts.length }} 篇帖子将从 {{ scheduleForm.startTime || '...' }} 起，每隔 {{ scheduleForm.interval }} 分钟自动发布一篇。
@@ -173,6 +188,8 @@ const batchPlatforms = ref([])
 // 排期
 const scheduleDialogVisible = ref(false)
 const scheduleForm = reactive({ startTime: '', interval: 60 })
+const schedulePlatforms = ref([])
+const scheduleAccountMap = reactive({})
 
 const getStatusType = (status) => ({ draft: 'info', scheduled: '', publishing: 'warning', published: 'success', failed: 'danger' }[status] || 'info')
 const statusLabel = (status) => ({ draft: '草稿', scheduled: '已排期', publishing: '发布中', published: '已发布', failed: '失败' }[status] || status)
@@ -461,16 +478,40 @@ const confirmBatchPublish = async () => {
 const showScheduleDialog = () => {
   scheduleForm.startTime = ''
   scheduleForm.interval = 60
+
+  // 收集所有选中帖子涉及的平台
+  const platformSet = new Set()
+  selectedPosts.value.forEach(p => {
+    getPostPlatforms(p).forEach(pt => platformSet.add(pt))
+  })
+  schedulePlatforms.value = [...platformSet]
+
+  // 初始化账号选择
+  Object.keys(scheduleAccountMap).forEach(k => delete scheduleAccountMap[k])
+  schedulePlatforms.value.forEach(pt => {
+    scheduleAccountMap[pt] = []
+  })
+
   scheduleDialogVisible.value = true
 }
 
 const confirmSchedule = async () => {
   if (!scheduleForm.startTime) { ElMessage.warning('请选择起始时间'); return }
+
+  // 构造账号映射：只包含有选择的平台
+  const accountsMap = {}
+  for (const pt of schedulePlatforms.value) {
+    if (scheduleAccountMap[pt]?.length) {
+      accountsMap[pt] = scheduleAccountMap[pt]
+    }
+  }
+
   try {
     const res = await articleApi.scheduleArticles({
       postIds: selectedPosts.value.map(p => p.id),
       startTime: scheduleForm.startTime,
-      interval: scheduleForm.interval
+      interval: scheduleForm.interval,
+      accounts: JSON.stringify(accountsMap)
     })
     if (res.code === 200) {
       ElMessage.success(res.msg)

@@ -33,6 +33,15 @@ All notable changes to `social-auto-upload` will be documented in this file.
 - **CSV 模板缺少微博编号** — 后端模板说明补上 `10=微博`
 - **帖子管理页语法错误** — 修复 `v-model` 使用可选链 `?.` 赋值导致的编译失败
 
+## [0.3.2] - 2026-04-20
+
+### Added
+
+- **排期发布可选账号** — 排期对话框新增按平台选择发布账号的功能，选择结果写入帖子 `selected_accounts` 字段
+  - 前端排期对话框自动收集选中帖子涉及的所有平台，按平台分组展示账号多选下拉
+  - 不选账号时提示"不选则用全部账号"，走调度器兜底逻辑
+  - 后端 `scheduleArticles` 接口新增 `accounts` 参数，排期时同时写入账号选择
+
 ## [0.3.1] - 2026-04-18
 
 ### Fixed

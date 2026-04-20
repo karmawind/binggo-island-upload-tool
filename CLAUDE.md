@@ -537,6 +537,9 @@ sau skill install
 
 - 批量删除：`POST /batchDeleteArticlePosts`，接收 `{ ids: [1,2,3] }`
 - 前端批量操作栏已有：批量发布、排期发布、批量删除
+- **排期发布可选账号**（v0.3.2）：排期对话框按平台选择发布账号，选择结果写入 `selected_accounts`；不选则调度器走兜底逻辑（该平台全部有效账号）
+  - 前端：`schedulePlatforms` + `scheduleAccountMap` 收集平台和账号
+  - 后端：`scheduleArticles` 接口接收 `accounts` 参数（JSON 字符串，如 `{"5":[1,2],"7":[3]}`）
 
 ### 百家号发布按钮
 

@@ -1465,6 +1465,7 @@ def scheduleArticles():
     post_ids = data.get('postIds', [])
     start_time = data.get('startTime', '')       # '2026-04-12 10:00'
     interval_minutes = data.get('interval', 60)   # 间隔分钟数
+    accounts_map = data.get('accounts', '{}')      # '{"5": [1,2], "7": [3]}'
 
     if not post_ids or not start_time:
         return jsonify({"code": 400, "msg": "缺少帖子ID或起始时间", "data": None}), 400
@@ -1478,8 +1479,8 @@ def scheduleArticles():
             for i, pid in enumerate(post_ids):
                 scheduled_at = base + timedelta(minutes=interval_minutes * i)
                 cursor.execute(
-                    "UPDATE article_posts SET status='scheduled', scheduled_at=? WHERE id=?",
-                    (scheduled_at.strftime('%Y-%m-%d %H:%M:%S'), pid)
+                    "UPDATE article_posts SET status='scheduled', scheduled_at=?, selected_accounts=? WHERE id=?",
+                    (scheduled_at.strftime('%Y-%m-%d %H:%M:%S'), accounts_map, pid)
                 )
             conn.commit()
 

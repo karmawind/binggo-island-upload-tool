@@ -160,7 +160,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -296,6 +296,21 @@ const fetchGroups = async () => {
 }
 
 onMounted(() => { fetchPosts(); fetchAccounts(); fetchGroups() })
+
+// 自动轮询：当有排期中或发布中的帖子时，每 10 秒刷新一次状态
+let statusPollTimer = null
+const hasActivePosts = computed(() =>
+  posts.value.some(p => p.status === 'scheduled' || p.status === 'publishing')
+)
+watch(hasActivePosts, (active) => {
+  if (active && !statusPollTimer) {
+    statusPollTimer = setInterval(() => { fetchPosts() }, 10000)
+  } else if (!active && statusPollTimer) {
+    clearInterval(statusPollTimer)
+    statusPollTimer = null
+  }
+}, { immediate: true })
+onUnmounted(() => { if (statusPollTimer) clearInterval(statusPollTimer) })
 
 const handleSelection = (selection) => { selectedPosts.value = selection }
 const goToPublish = () => { router.push('/article-publish') }

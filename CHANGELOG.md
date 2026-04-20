@@ -41,6 +41,7 @@ All notable changes to `social-auto-upload` will be documented in this file.
   - 前端排期对话框自动收集选中帖子涉及的所有平台，按平台分组展示账号多选下拉
   - 不选账号时提示"不选则用全部账号"，走调度器兜底逻辑
   - 后端 `scheduleArticles` 接口新增 `accounts` 参数，排期时同时写入账号选择
+- **排期状态自动刷新** — 帖子管理页检测到有 `scheduled`/`publishing` 状态的帖子时，每 10 秒自动轮询刷新状态，全部完成后停止
 
 ## [0.3.1] - 2026-04-18
 
